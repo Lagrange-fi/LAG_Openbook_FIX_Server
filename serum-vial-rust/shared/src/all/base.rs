@@ -5,16 +5,15 @@ pub use std::time::UNIX_EPOCH;
 use chrono::{DateTime, TimeZone, NaiveDateTime, Utc};
 pub use hmacsha::HmacSha;
 pub use sha2::Sha256;
-use crate::all::enums::{OrderSide, OrderStatus, OrderType, ExecType, TimeInForce, ExecTransType};
+use crate::all::enums::{OrderSide, OrderStatus, OrderTypePrice, ExecType, TimeInForce, ExecTransType};
 
 #[derive(Debug, Clone, PartialOrd)]
 pub struct Order {
     cl_id: String,
     orig_qty: f64,
     rem_qty: f64,
-    price: f64,
     side: OrderSide,
-    ord_type: OrderType,
+    ord_type: OrderTypePrice,
     tif: TimeInForce,
     broker: String,
     sec_id: String,
@@ -151,7 +150,7 @@ pub struct ExecutionReport {
     exec_type: ExecType,
     trans_type: ExecTransType,
     side: OrderSide,
-    ord_type: OrderType,
+    ord_type: OrderTypePrice,
     last_time: chrono::DateTime<chrono::Utc>,
     limit: f64,
     stop: f64,
@@ -162,7 +161,8 @@ pub struct ExecutionReport {
     total_qty: f64,
 }
 
-impl Hash for ExecutionReport {
+impl Hash for ExecutionReport
+{
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.hash(state);
     }
@@ -179,7 +179,6 @@ pub struct Level {
     pub price: f64,
     pub size: f64
 }
-
 
 #[derive(Debug, Clone, PartialOrd)]
 pub struct Instrument {

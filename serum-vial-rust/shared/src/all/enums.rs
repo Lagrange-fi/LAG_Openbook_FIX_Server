@@ -1,12 +1,12 @@
 
 //#[repr(u8)]
 //https://www.onixs.biz/fix-dictionary/4.4/tagNum_40.html
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd)]
-pub enum OrderType {
+#[derive(Debug, Clone, PartialEq, PartialOrd)]
+pub enum OrderTypePrice {
     Market,
-    Limit,
-    Stop,
-    StopLimit,
+    Limit(f64),
+    Stop(f64),
+    StopLimit(f64, f64),
 }
 
 //https://www.onixs.biz/fix-dictionary/4.4/tagNum_54.html

@@ -1,16 +1,17 @@
 
 
-use crate::shared::enums::{OrderSide, OrderStatus, OrderType, ExecType, TimeInForce, ExecTransType, OrdRejectResponse};
+use crate::all::enums::{OrderSide, OrderStatus, OrderTypePrice, ExecType, TimeInForce, ExecTransType, OrdRejectResponse};
 
 pub trait ToFix<char>{ fn to_fix(&self) -> char; }
 
-impl ToFix<char> for OrderType {
+impl ToFix<char> for OrderTypePrice {
     fn to_fix(&self) -> char{
         match self{
-            OrderType::Market => '0',
-            OrderType::Limit => '1',
-            OrderType::Stop => '2',
-            OrderType::StopLimit => '3',
+            OrderTypePrice::Market => '0',
+            OrderTypePrice::Limit(f64) => '1',
+            OrderTypePrice::Stop(f64) => '2',
+            OrderTypePrice::StopLimit(price, stop)=> '3',
+            _ => '*',
         }
     }
 }

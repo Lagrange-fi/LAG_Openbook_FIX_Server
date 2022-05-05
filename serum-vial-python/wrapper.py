@@ -5,17 +5,39 @@ import threading
 from decimal import *
 from sortedcontainers import SortedList    
 
+from random import randint
+from base58 import b58decode as decode
+
+from pyserum.connection import get_live_markets, get_token_mints
+from pyserum.connection import conn
+from pyserum.market import Market
+from pyserum.enums import OrderType, Side
+
+
+from solana.rpc.types import TxOpts
+from solana.keypair import Keypair
+from solana.publickey import PublicKey
+from solana.rpc.api import Client
+from solana.rpc.types import TokenAccountOpts
+
+
+
 
 WSS_URL = 'wss://api.serum-vial.dev/v1/ws'
+REST_URL = 'https://solana-api.projectserum.com'
 
 class Wrapper:
-    def __init__(self, logger, message_event, information_event):
+    def __init__(self, keypair, logger, message_event, information_event):
+        self.__owner = Keypair(decode(keypair)[:32])
         self.__message_event = message_event
         self.__information_event = information_event
         self.__logger = logger
         self.__channel_list = []
         self.__snapshots_map = {}
         self.__ws = SocketObj(WSS_URL, self.__logger, self.__m_event, self.__i_event)
+        self.__all_mint_address = get_token_mints()
+        self.__all_market_address = get_live_markets()
+        self.__markets = {}
         
         
     def start(self):
@@ -87,7 +109,77 @@ class Wrapper:
         
         self.__information_event(event, msg)
         
+        
+    def __get_new_id(self):
+        return randint(0, 0xffffffffffffffff)
     
+    
+    def send_new_order(self, order: Order):
+        if order.client_id == 0:
+            order.client_id = self.__get_new_id()
+        
+        if order.market not in self.__markets or not self.__markets[order.market]._conn.is_connected:
+            self.create_new_market_connector(order.market)
+        
+        try:
+            payer = [i.address for i in self.__all_mint_address if i.name == order.second][0]
+            
+            if order.side == Side.BUY:
+                payer = PublicKey(decode(
+                    Client(REST_URL).get_token_accounts_by_owner(
+                        PublicKey(decode("GKvwL3FmQRHuB9mcZ3WuqTuVjbGDzdW51ec8fYdeHae1")), 
+                        TokenAccountOpts(payer)
+                    )['result']['value'][0]['pubkey']
+                ))
+            
+            tx = self.__markets[order.market].place_order(
+                payer=payer,
+                owner=self.__owner,
+                side=order.side,
+                order_type=OrderType.LIMIT,
+                limit_price=order.price,
+                max_quantity=order.amount,
+                client_id=order.client_id,
+                opts = TxOpts(skip_preflight=True)
+            )
+            
+            self.__logger.info(f'order sent: side {order.side} price {order.price} size {order.amount} id {order.client_id} tx {tx}')
+        except Exception as e:
+            self.__logger.error(e)
+            
+        return order
+            
+            
+    def cancel_order(self, my_order: Order):
+        if my_order.market not in self.__markets or not self.__markets[my_order.market]._conn.is_connected:
+            self.create_new_market_connector(my_order.market)
+        
+        oredrs = []
+        if my_order.side == Side.BUY:
+            orders = self.__markets[my_order.market].load_bids()
+        else: 
+            orders = self.__markets[my_order.market].load_asks()
+            
+        orders = [order for order in orders if order.client_id == my_order.client_id]
+        if len(orders) == 0:
+            self.__logger.info(f'order not found')
+            return
+
+        order = orders[0]
+        tx = self.__markets[my_order.market].cancel_order(self.__owner, order, opts=TxOpts(skip_preflight=True))
+        self.__logger.info(f'cancelled order: side {my_order.side} price {order.info.price} size {order.info.size} id {order.client_id} tx {tx}')
+        
+        
+    def create_new_market_connector(self, market):
+        try:
+            self.__markets[market] = Market.load(
+                conn(REST_URL), 
+                [i.address for i in self.__all_market_address if i.name == market][0]
+            )
+        except Exception as e:
+            self.__logger.error(e)
+        
+        
 class SocketObj(object):
     def __init__(self, url, logger, message_event, information_event):
         self.__message_event = message_event
@@ -198,4 +290,4 @@ class SocketObj(object):
                 'asks': [[Decimal(ask[0]), Decimal(ask[1])] for ask in dump['asks']],
                 'bids': [[Decimal(bid[0]), Decimal(bid[1])] for bid in dump['bids']]
             }
-        )
+        )        

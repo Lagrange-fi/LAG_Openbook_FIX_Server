@@ -1,3 +1,5 @@
+from pyserum.enums import Side
+
 class BrokerEvent:
     SessionLogon = "SessionLogon"
     SessionLogout = "SessionLogout"
@@ -68,3 +70,49 @@ class SubscribedChannel:
     @property
     def market(self):
         return self.__market
+    
+class Order:
+    def __init__(self, first: str, second: str, amount: float, price: float, side: Side, client_id: int = 0):
+        self.__first = first
+        self.__second = second
+        self.__client_id = client_id
+        self.__amount = amount
+        self.__price = price
+        self.__side = side
+        
+    def __eq__(self, other) -> bool:
+        return self.__client_id == other.__client_id
+    
+    @property
+    def client_id(self) -> int:
+        return self.__client_id
+    
+    @client_id.setter
+    def client_id(self, new_id):
+        if not isinstance(new_id, int):
+            raise TypeError
+        self.__client_id = new_id
+    
+    @property
+    def amount(self) -> float:
+        return self.__amount
+    
+    @property
+    def price(self) -> float:
+        return self.__price
+    
+    @property
+    def side(self) -> Side:
+        return self.__side
+    
+    @property
+    def first(self) -> str:
+        return self.__first
+    
+    @property
+    def second(self) -> str:
+        return self.__second
+    
+    @property
+    def market(self) -> str:
+        return f'{self.__first}/{self.__second}'

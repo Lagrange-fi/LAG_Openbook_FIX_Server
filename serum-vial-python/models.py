@@ -14,7 +14,7 @@ class Ops:
 class Channels:
     Level1 = 'level1'
     Level2 = 'level2'
-    
+    Level3 = 'level3'
    
 class MessageType: 
     class Event:
@@ -28,6 +28,13 @@ class MessageType:
     class Level2:
         Snapshot = 'l2snapshot'
         Update = 'l2update'
+        
+    class Level3:
+        Snapshot = 'l3snapshot'
+        Open = 'open'
+        Change = 'change'
+        Fill = 'fill'
+        Done = 'done'
 
     
 class Instrument:
@@ -72,7 +79,15 @@ class SubscribedChannel:
         return self.__market
     
 class Order:
-    def __init__(self, first: str, second: str, amount: float, price: float, side: Side, client_id: int = 0):
+    def __init__(
+        self, 
+        first: str, 
+        second: str, 
+        amount: float, 
+        price: float, 
+        side: Side, 
+        client_id: int = 0
+    ):
         self.__first = first
         self.__second = second
         self.__client_id = client_id

@@ -25,6 +25,7 @@ def m_event(event, msg):
     match event:
         case Channels.Level1:
             print(f"{now.hour}:{now.minute}:{now.second} | <-- {msg['market']} BestAsk({msg['bestAsk']}) BestBid({msg['bestBid']})\n")
+            print()
         case Channels.Level2:
             print(f"{now.hour}:{now.minute}:{now.second} | <-- {msg['market']}")
             print('Asks')
@@ -33,6 +34,14 @@ def m_event(event, msg):
             print('Bids')
             pprint(msg['bids'][:COUNT])
             print()
+        case Channels.Level3:
+            if isinstance(msg, list):
+                print(f"{now.hour}:{now.minute}:{now.second} | <-- {msg[0]['market']}")
+            else:
+                print(f"{now.hour}:{now.minute}:{now.second} | <-- {msg['market']}")
+            pprint(msg)
+            print()
+        
 
 
 def i_event(event, msg = None):
@@ -65,10 +74,16 @@ if __name__ == '__main__':
                 wr.subscribe(Channels.Level1, btc_usdt)
             case "ul1":
                 wr.unsubscribe(Channels.Level1, btc_usdt)
+                
             case "l2":
                 wr.subscribe(Channels.Level2, eth_usdt)
             case "ul2":
                 wr.unsubscribe(Channels.Level2, eth_usdt)
+                
+            case "l3":
+                wr.subscribe(Channels.Level3, eth_usdt)
+            case "ul3":
+                wr.unsubscribe(Channels.Level3, eth_usdt)
                 
             case "sb":
                 order_buy = wr.send_new_order(order_buy)

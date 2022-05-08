@@ -99,6 +99,9 @@ class Wrapper:
                 
                 self.__message_event(Channels.Level2, self.__snapshots_map[msg['market']])
                 
+            case _:
+                self.__message_event(Channels.Level3, msg)
+                
                 
     def __i_event(self, event, msg = None):
         match event:
@@ -127,7 +130,7 @@ class Wrapper:
             if order.side == Side.BUY:
                 payer = PublicKey(decode(
                     Client(REST_URL).get_token_accounts_by_owner(
-                        PublicKey(decode("GKvwL3FmQRHuB9mcZ3WuqTuVjbGDzdW51ec8fYdeHae1")), 
+                        self.__owner.public_key, 
                         TokenAccountOpts(payer)
                     )['result']['value'][0]['pubkey']
                 ))
@@ -251,6 +254,17 @@ class SocketObj(object):
                 self.__parse_snapshot_lvl2(dump)
             case MessageType.Level2.Update:
                 self.__parse_update_lvl2(dump)
+            case MessageType.Level3.Snapshot:
+                self.__parse_snapshot_lvl3(dump)
+            case MessageType.Level3.Open:
+                self.__parse_open_lv3(dump)
+            case MessageType.Level3.Change:
+                self.__parse_change_lv3(dump)
+            case MessageType.Level3.Fill:
+                self.__parse_fill_lv3(dump)
+            case MessageType.Level3.Done:
+                self.__parse_done_lv3(dump)
+            
             case MessageType.Event.Subscribed: 
                 self.__information_event(
                     MessageType.Event.Subscribed, 
@@ -290,4 +304,65 @@ class SocketObj(object):
                 'asks': [[Decimal(ask[0]), Decimal(ask[1])] for ask in dump['asks']],
                 'bids': [[Decimal(bid[0]), Decimal(bid[1])] for bid in dump['bids']]
             }
-        )        
+        )
+        
+        
+    def __parse_snapshot_lvl3(self, dump):
+        orders = dump['asks'] + dump['bids']
+        for i in orders:
+            i['market'] = dump['market']
+            i['type'] = 'open'
+            
+        self.__message_event(MessageType.Level3.Snapshot, 
+            orders
+        )
+    
+    
+    def __parse_lv3(self, dump):
+        if dump['type'] == 'done':
+            return {
+                'market': dump['market'],
+                'type': dump['type'],
+                'orderId': dump['orderId'],
+                'clientId': dump['clientId'],
+                'side': dump['side'],
+                'account': dump['account'],
+                'accountSlot': dump['accountSlot'],
+                'reason': dump['reason']
+            }
+        else:
+            return {
+                'market': dump['market'],
+                'type': dump['type'],
+                'orderId': dump['orderId'],
+                'clientId': dump['clientId'],
+                'side': dump['side'],
+                'price': dump['price'],
+                'size': dump['size'],
+                'account': dump['account'],
+                'accountSlot': dump['accountSlot']
+            }
+        
+        
+    def __parse_open_lv3(self, dump):        
+        self.__message_event(MessageType.Level3.Open, 
+            self.__parse_lv3(dump)
+        )
+        
+        
+    def __parse_change_lv3(self, dump):
+        self.__message_event(MessageType.Level3.Change, 
+            self.__parse_lv3(dump)
+        )
+        
+        
+    def __parse_fill_lv3(self, dump):
+        self.__message_event(MessageType.Level3.Fill, 
+            self.__parse_lv3(dump)
+        )
+        
+        
+    def __parse_done_lv3(self, dump):
+        self.__message_event(MessageType.Level3.Fill, 
+            self.__parse_lv3(dump)
+        )

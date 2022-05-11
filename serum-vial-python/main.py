@@ -1,8 +1,8 @@
-from wrapper import Wrapper
-from models import *
+from serum_modules.wrapper import Wrapper
+from serum_modules.models import *
 from pprint import pprint
 import datetime 
-from config import KEYPAIR_PHANTOM
+from serum_modules.config import KEYPAIR_PHANTOM
 
 COUNT = 10
 

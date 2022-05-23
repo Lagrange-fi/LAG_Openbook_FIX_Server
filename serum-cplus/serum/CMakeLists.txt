@@ -1,4 +1,5 @@
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 add_library("${SERUM_NAME}" STATIC
         FIX8_SERUM_Data_classes.cpp
         FIX8_SERUM_Data_traits.cpp
@@ -6,6 +7,7 @@ add_library("${SERUM_NAME}" STATIC
         FIX8_SERUM_Order_classes.cpp
         FIX8_SERUM_Order_traits.cpp
         FIX8_SERUM_Order_types.cpp
+        SERUM_Data_session.cpp
 )
 
 find_package(Fix8 REQUIRED)

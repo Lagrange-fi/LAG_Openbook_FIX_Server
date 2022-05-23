@@ -8,6 +8,14 @@
 
 namespace marketlib
 {
+    struct market_data_request_t
+    {
+        const std::string   engine;
+        const std::string   symbol;
+        const market_depth_t depth;/* top,full*/
+        const subscription_update_type_t update_type;/*full, incremental*/
+    };
+
     /*
     * @class instrument_descr_
     * @brief instrument_descr_t represent fields of pair
@@ -130,7 +138,6 @@ namespace marketlib
         order_state_t   state = ost_Undefined;
         time_in_force_t tif   = tf_Undefined;
         order_type_t type  = ot_Undefined;
-        order_direction_t dir = od_undefined;
         time_t init_time = 0;
         time_t last_time = 0;
         rule_id  ruleId=0;  //for stop orders only

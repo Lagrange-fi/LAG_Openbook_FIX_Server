@@ -2,6 +2,7 @@ import random
 import time
 import quickfix as fix
 import quickfix44 as fix44
+import traceback
 
 
 class BrokerEvent:
@@ -9,7 +10,6 @@ class BrokerEvent:
     SessionLogout = "SessionLogout"
     SessionError = "SessionError"
     MarketDataReject = "MarketDataReject"
-
 
 class FixApp(fix.Application):
     def __init__(self, name):
@@ -204,8 +204,8 @@ class Client:
     def on_event(self, data):
         print('! {}-{}'.format(data["broker"], data["event"]))
         if data["event"] is BrokerEvent.SessionLogon:
-            self.price_application.get_instruments()
-            self.start_some_logic()
+            #self.price_application.get_instruments()
+            self.price_application.subscribe(self.instrument, True)
 
     def on_instrument(self, broker, instr):
         print("{}: {}".format(broker, instr['Symbol']))
@@ -220,17 +220,23 @@ class Client:
         print("-----------------------------")
         print("Subscribe-Unsubscribe test")
         self.price_application.subscribe(self.instrument, 1, True, True)
-        time.sleep(10)
+        time.sleep(30)
         self.price_application.subscribe(self.instrument, 1, False)
 
 
 if __name__ == '__main__':
     try:
-        logic = Client('stream.cfg')
+        logic = Client('client_stream_template.cfg')
         price_initiator = fix.SocketInitiator(logic.price_application, logic.price_storeFactory, logic.price_settings,
                                               logic.price_logFactory)
         price_initiator.start()
+
+        message = ''
         while True:
-            pass
+            message = input('enter e to exit the app\n')
+            if message == "e":
+                break
+
     except Exception as e:
         print("Exception error: '%s'." % e)
+        traceback.print_exc()

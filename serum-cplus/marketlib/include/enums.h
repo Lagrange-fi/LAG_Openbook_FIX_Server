@@ -2,8 +2,22 @@
 
 namespace marketlib
 {
+    enum subscription_type
+    {
+        snapshot = '0',
+        shapshot_update = '1',
+        snapshot_update_disable = '2',
+    };
+
+    enum subscription_update_type_t
+    {
+        full_refresh = 0,
+        incemental_refresh = 1,
+    };
+
     enum security_type_t{
         st_undef = -1,
+        st_crypto,
         st_forex,
         st_stock,
         st_futures,
@@ -16,12 +30,6 @@ namespace marketlib
         ot_Stop_Loss='3', //stop
         ot_Stop_Limit='4',//stoplimit
         ot_Undefined
-    };
-
-    enum order_direction_t {
-        od_entry,
-        od_stoploss,
-        od_undefined,
     };
 
     enum time_in_force_t {
@@ -169,11 +177,10 @@ namespace marketlib
         brr_not_autorized = 6
     };
 
-    enum subscription_model
+    enum market_depth_t
     {
-        top,
-        full,
-        incremental,
+        top = 0,
+        full = 1,
     };
 
     /*

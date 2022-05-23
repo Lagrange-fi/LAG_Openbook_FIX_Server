@@ -1,5 +1,5 @@
 //-------------------------------------------------------------------------------------------------
-// *** f8c generated file: DO NOT EDIT! Created: 2022-05-10 15:24:41 ***
+// *** f8c generated file: DO NOT EDIT! Created: 2022-05-15 19:24:43 ***
 //-------------------------------------------------------------------------------------------------
 /*
 
@@ -148,7 +148,6 @@ public:
    virtual bool operator() (const class BidRequest *msg) const { return false; }
    virtual bool operator() (const class BidResponse *msg) const { return false; }
    virtual bool operator() (const class ListStrikePrice *msg) const { return false; }
-   virtual bool operator() (const class XMLnonFIX *msg) const { return true; }
    virtual bool operator() (const class RegistrationInstructions *msg) const { return false; }
    virtual bool operator() (const class RegistrationInstructionsResponse *msg) const { return false; }
    virtual bool operator() (const class OrderMassCancelRequest *msg) const { return false; }

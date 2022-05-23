@@ -17,7 +17,7 @@ Boost doesn't really need much introduction. Let's quote from their website.
 > We aim to establish "existing practice" and provide reference implementations so that Boost libraries are suitable for eventual standardization. Beginning with the ten Boost Libraries included in the Library Technical Report (TR1) and continuing with every release of the ISO standard for C++ since 2011, the C++ Standards Committee has continued to reply on Boost as a valuable source for additions to the Standard C++ Library.
 
 ### To install Boost follow the steps outlined below
-```bash
+```BOOST
 curl -LO https://dl.bintray.com/boostorg/release/1.79.0/source/boost_1_79_0.tar.gz
 tar -xzf boost_1_79_0.tar.gz && cd boost_1_79_0/
 ./bootstrap.sh
@@ -51,7 +51,6 @@ sudo ldconfig
 
 #compile error: need  fix https://stackoverflow.com/questions/46916875/error-when-building-fix-8
 #You have to explicitly #include <functional> in logger.hpp.
-``
 
 
 # Cloning and compiling the project's source

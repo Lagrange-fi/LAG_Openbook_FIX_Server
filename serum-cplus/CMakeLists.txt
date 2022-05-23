@@ -1,11 +1,17 @@
+
+
+set(CMAKE_VERBOSE_MAKEFILE ON)
+
 cmake_minimum_required(VERSION 3.10)
+
 project(fixserver
     LANGUAGES C CXX 
     VERSION 0.1.0)
 
-include(ExternalProject)
+# c++ 17
+set (CMAKE_CXX_STANDARD 17)
 
-message(CMAKE_SOURCE_DIR:${CMAKE_SOURCE_DIR}\n)
+include(ExternalProject)
 
 ExternalProject_Add(
     P7
@@ -18,19 +24,12 @@ ExternalProject_Add(
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 
-message(CMAKE_MODULE_PATH:${CMAKE_MODULE_PATH}\n)
-
 string(CONCAT SERUM_NAME ${PROJECT_NAME} "serum")
 string(CONCAT CLI_NAME ${PROJECT_NAME} "cli")
 set(SHAREDLIB_NAME "shared")
 set(MARKETLIB_NAME "market")
 
-# c++ 17
-set (CMAKE_CXX_STANDARD 17)
-
-# boost v. latest
-#enable_testing()
-
 add_subdirectory(serum)
 add_subdirectory(marketlib)
 add_subdirectory(sharedlib)
+add_subdirectory(cli)

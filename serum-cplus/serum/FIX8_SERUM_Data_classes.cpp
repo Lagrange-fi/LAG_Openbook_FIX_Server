@@ -1,5 +1,5 @@
 //-------------------------------------------------------------------------------------------------
-// *** f8c generated file: DO NOT EDIT! Created: 2022-05-11 21:41:20 ***
+// *** f8c generated file: DO NOT EDIT! Created: 2022-05-15 19:24:33 ***
 //-------------------------------------------------------------------------------------------------
 /*
 
@@ -283,7 +283,6 @@ const SERUM_Data::FIX8_SERUM_Data_BaseMsgEntry::Pair msgpairs[]
    { "k", { Type2Type<SERUM_Data::BidRequest>(), "BidRequest" } },
    { "l", { Type2Type<SERUM_Data::BidResponse>(), "BidResponse" } },
    { "m", { Type2Type<SERUM_Data::ListStrikePrice>(), "ListStrikePrice" } },
-   { "n", { Type2Type<SERUM_Data::XMLnonFIX>(), "XMLnonFIX" } },
    { "o", { Type2Type<SERUM_Data::RegistrationInstructions>(), "RegistrationInstructions" } },
    { "p", { Type2Type<SERUM_Data::RegistrationInstructionsResponse>(), "RegistrationInstructionsResponse" } },
    { "q", { Type2Type<SERUM_Data::OrderMassCancelRequest>(), "OrderMassCancelRequest" } },
@@ -297,14 +296,14 @@ const SERUM_Data::FIX8_SERUM_Data_BaseMsgEntry::Pair msgpairs[]
    { "x", { Type2Type<SERUM_Data::SecurityListRequest>(), "SecurityListRequest" } },
    { "y", { Type2Type<SERUM_Data::SecurityList>(), "SecurityList" } },
    { "z", { Type2Type<SERUM_Data::DerivativeSecurityListRequest>(), "DerivativeSecurityListRequest" } }
-}; // 95
+}; // 94
 
 extern const FIX8_SERUM_Data_BaseEntry::Pair fldpairs[];
 
 /// Compiler generated metadata object, accessed through this function.
 const F8MetaCntx& ctx() // avoid SIOF
 {
-   static const FIX8_SERUM_Data_BaseMsgEntry bme(msgpairs, 95);
+   static const FIX8_SERUM_Data_BaseMsgEntry bme(msgpairs, 94);
    static const FIX8_SERUM_Data_BaseEntry be(fldpairs, 912);
    static const F8MetaCntx _ctx(4400, bme, be, cn, "FIX.4.4");
    return _ctx;

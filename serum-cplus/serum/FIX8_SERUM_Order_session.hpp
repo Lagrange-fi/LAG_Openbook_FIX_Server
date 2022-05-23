@@ -149,7 +149,6 @@ public:
    // bool operator() (const FIX8::SERUM_Order::BidRequest *msg) const;
    // bool operator() (const FIX8::SERUM_Order::BidResponse *msg) const;
    // bool operator() (const FIX8::SERUM_Order::ListStrikePrice *msg) const;
-   // bool operator() (const FIX8::SERUM_Order::XMLnonFIX *msg) const;
    // bool operator() (const FIX8::SERUM_Order::RegistrationInstructions *msg) const;
    // bool operator() (const FIX8::SERUM_Order::RegistrationInstructionsResponse *msg) const;
    // bool operator() (const FIX8::SERUM_Order::OrderMassCancelRequest *msg) const;

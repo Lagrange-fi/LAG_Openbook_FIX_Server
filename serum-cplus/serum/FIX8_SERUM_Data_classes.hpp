@@ -1,5 +1,5 @@
 //-------------------------------------------------------------------------------------------------
-// *** f8c generated file: DO NOT EDIT! Created: 2022-05-11 21:41:20 ***
+// *** f8c generated file: DO NOT EDIT! Created: 2022-05-15 19:24:33 ***
 //-------------------------------------------------------------------------------------------------
 /*
 
@@ -19378,22 +19378,6 @@ public:
          static const unsigned get_fieldcnt() { return _fieldcnt; };
       };
    };
-};
-
-//-------------------------------------------------------------------------------------------------
-/// XMLnonFIX (n), admin, 0 fields, 0 groups.
-class XMLnonFIX : public Message
-{
-
-public:
-   explicit XMLnonFIX(bool deepctor=true) {}
-   ~XMLnonFIX() = default;
-   bool process(Router& rt) const { return (static_cast<FIX8_SERUM_Data_Router&>(rt))(this); }
-   bool is_admin() const { return true; }
-
-   static const MsgType& get_msgtype() { return _msgtype; }
-   static const FieldTrait *get_traits() { return _traits; };
-   static const unsigned get_fieldcnt() { return _fieldcnt; };
 };
 
 //-------------------------------------------------------------------------------------------------

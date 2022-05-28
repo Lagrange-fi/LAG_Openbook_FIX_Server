@@ -1,7 +1,7 @@
 #pragma once
 
 #include <string>
-#include "sharedlib/include/ILogger.h"
+#include <sharedlib/include/ILogger.h>
 #include "BrokerModels.h"
 
 class IBrokerClient {

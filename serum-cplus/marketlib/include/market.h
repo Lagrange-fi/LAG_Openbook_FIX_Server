@@ -22,22 +22,11 @@ namespace marketlib
     */
     struct instrument_descr_t
     {
-        const std::string     engine;
+        const std::string   engine;
         std::string     sec_id;
         std::string    symbol;
         std::string     currency;
-        security_type_t type;
-        unsigned        maturity_year ; //  futures only
-        unsigned        maturity_month ;//  futures only
-        unsigned       maturity_day ;  //  futures only
         int            tick_precision;
-        double		  tick_value;
-        int		      lot_size;
-        int		      min_size;
-        bool precision_valid() const            { return tick_precision != -1;}
-        bool tick_value_valid()const			{ return tick_value!= -1; }
-        bool currency_valid()const				{ return !currency.empty(); }
-        bool lot_size_valid()const				{ return lot_size!= -1; }
         const std::string& hash () const		{ return  sec_id;}
     };
 

@@ -2,7 +2,7 @@
 
 #include "BrokerLib/IBrokerApplication.h"
 #include "BrokerLib/ISettings.h"
-#include "sharedlib/include/ILogger.h"
+#include <sharedlib/include/ILogger.h>
 #include <boost/format.hpp>
 
 class Logger: public ILogger
@@ -16,8 +16,8 @@ public:
 	void Info(const char *content, ...) override;
 	void Debug(const char *content, ...) override;
 	void Error(const char *content, ...) override;
-	void Warn(const char *content, ...) override;
     void Critical(const char *content, ...) override;
+	void Warn(const char *content, ...) override;
     void Trace(const char *content, ...) override;
 
 	~Logger() = default;

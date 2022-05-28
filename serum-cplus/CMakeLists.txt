@@ -25,11 +25,15 @@ ExternalProject_Add(
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 
 string(CONCAT SERUM_NAME ${PROJECT_NAME} "serum")
+string(CONCAT SERUM_DEX_NAME ${PROJECT_NAME} "SerumApp")
+string(CONCAT SERUM_TEST ${PROJECT_NAME} "Test")
 string(CONCAT CLI_NAME ${PROJECT_NAME} "cli")
 set(SHAREDLIB_NAME "shared")
 set(MARKETLIB_NAME "market")
 
 add_subdirectory(serum)
+add_subdirectory(SerumApp)
 add_subdirectory(marketlib)
 add_subdirectory(sharedlib)
 add_subdirectory(cli)
+add_subdirectory(Test)

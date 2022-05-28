@@ -15,6 +15,7 @@ namespace BrokerModels {
         int decimals;
     };
 
+
     struct MarketBook {
         std::chrono::time_point < std::chrono::system_clock > time;
         double bidPrice;

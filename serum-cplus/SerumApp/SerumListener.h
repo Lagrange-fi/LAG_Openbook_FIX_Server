@@ -4,24 +4,24 @@
 #include <memory>
 #include <set>
 
-#include "BrokerLib/IBrokerClient.h"
+#include "BrokerLib/IListener.h"
 #include "BrokerLib/IBrokerApplication.h"
 #include "Utility/ConnectionWrapper.h"
 #include "BrokerLib/ISettings.h"
 #include "BrokerLib/BrokerModels.h"
 
-class SerumApp : public IBrokerClient {
-
+class SerumListener : public IListener
+{
 private:
 
-	friend ConnectionWrapper < SerumApp >;
+	friend ConnectionWrapper < SerumListener >;
 
 	typedef std::string string;
 	typedef std::shared_ptr < ILogger > logger_ptr;
 	typedef std::shared_ptr < ISettings > settings_ptr;
 	typedef std::shared_ptr < IBrokerApplication > application_ptr;
 	typedef BrokerModels::Market Market;
-	typedef std::map < string,  BrokerModels::DepthSnapshot > depth_snapshots;
+	typedef std::map < string,  std::list<BrokerModels::Order> > orders_map;
 
 protected:
 
@@ -34,11 +34,10 @@ protected:
 	};
 
 	logger_ptr logger;
+	application_ptr application;
 	settings_ptr settings;
-    IBrokerApplication* application;
-	ConnectionWrapper < SerumApp > connection;
-	depth_snapshots depth_snapshot;
-	string name;
+	ConnectionWrapper < SerumListener > connection;
+	orders_map orders;
 	
 
 	void onOpen();
@@ -56,19 +55,18 @@ protected:
 	bool activeCheck() const;
 
 public:
-	SerumApp(logger_ptr,  IBrokerApplication*, settings_ptr);
+	SerumListener(logger_ptr, application_ptr, settings_ptr);
 
 	bool isEnabled() const override;
 	bool isConnected() const override;
-	string getName() const override;
+	// string getName() const override;
 
 	void start() override;
 	void stop() override;
 
-	void subscribe(const BrokerModels::Instrument&, SubscriptionModel) override;
-	void unsubscribe(const BrokerModels::Instrument&, SubscriptionModel) override;
+	void listen(const BrokerModels::Instrument&) override;
+	void unlisten(const BrokerModels::Instrument&) override;
 
-	~SerumApp();
+	~SerumListener();
 
 };
-

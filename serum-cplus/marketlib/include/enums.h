@@ -2,6 +2,25 @@
 
 namespace marketlib
 {
+    enum security_request_result_t
+    {
+        /*
+         Valid values: Int
+        '0' 	Valid request
+        '1' 	Invalid or unsupported request
+        '2' 	No instruments found that match selection criteria
+        '3' 	Not authorized to retrieve instrument data
+        '4' 	Instrument data temporarily unavailable
+        '5' 	Request for instrument data not supported
+         */
+
+        srr_valid=0,
+        srr_invalid_or_unsupported=1,
+        srr_no_instruments=2,
+        srr_not_authorized=3,
+        srr_instrument_temporary_unavailable=4,
+        srr_req_not_supported=5,
+    };
     enum subscription_type
     {
         snapshot = '0',

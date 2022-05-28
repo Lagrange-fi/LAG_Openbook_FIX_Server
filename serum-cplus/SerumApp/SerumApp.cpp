@@ -133,7 +133,7 @@ bool SerumApp::activeCheck() const {
 	return enabledCheck() && connectedCheck();
 }
 
-SerumApp::SerumApp(logger_ptr _logger, application_ptr application, settings_ptr _settings):
+SerumApp::SerumApp(logger_ptr _logger, IBrokerApplication* application, settings_ptr _settings):
 	logger(_logger), application(application), connection(this, _settings->get(ISettings::Property::WebsocketEndpoint), _logger), 
 	depth_snapshot(depth_snapshots()), settings(_settings) {}
 

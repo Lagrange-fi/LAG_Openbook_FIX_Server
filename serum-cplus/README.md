@@ -33,7 +33,7 @@ mkdir cmake-build && cd cmake-build/
 cmake .. && cmake --build . --target install
 sudo cmake --build . --target install
 sudo ldconfig
-
+```
 ## Fix8
 ```bash
 curl -L https://github.com/fix8/fix8/archive/1.4.1.tar.gz -o fix8-1.4.1.tar.gz
@@ -45,6 +45,15 @@ sudo ldconfig
 #compile error: need  fix https://stackoverflow.com/questions/46916875/error-when-building-fix-8
 #You have to explicitly #include <functional> in logger.hpp.
 ```
+## Websocketpp
+```bash
+curl -L https://github.com/zaphoyd/websocketpp/archive/refs/tags/0.8.2.tar.gz -o websocketpp-0.8.2.tar.gz
+tar -xzf websocketpp-0.8.2.tar.gz && cd websocketpp-0.8.2
+cmake .
+sudo make install
+
+#compile error: need  fix https://stackoverflow.com/questions/46916875/error-when-building-fix-8
+#You
 
 # Cloning and compiling the source
 ```bash

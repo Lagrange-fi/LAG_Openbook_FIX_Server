@@ -115,10 +115,9 @@ class FixApp(fix.Application):
 
     def onFullSnapshot(self, message, sessionID):
         symbol = fix.Symbol()
-        securityID = fix.SecurityID()
         securityExchange = fix.SecurityExchange()
         snapshot = {
-            'SecurityID': message.getField(securityID).getString(),
+            'pool': message.getField(symbol).getString(),
             'SecurityExchange': message.getField(securityExchange).getString() if message.isSetField(
                 securityExchange) else "",
             'data': [],
@@ -131,12 +130,14 @@ class FixApp(fix.Application):
             mdEntryType = fix.MDEntryType()
             mdEntryPx = fix.MDEntryPx()
             mdEntrySize = fix.MDEntrySize()
+            mdEntryDate = fix.MDEntryDate()
+            mdEntryTime = fix.MDEntryTime()
             snapshot['data'].append({
                 'MDEntryType': group.getField(mdEntryType).getString(),
-                'MDEntryID': group.getField(1023),
                 'MDEntrySize': group.getField(mdEntryPx).getString(),
                 'MDEntryPx': group.getField(mdEntrySize).getString(),
-                # 'MDEntryLevel': mdEntryLevel.getString(),
+                'MDEntryDate': group.getField(mdEntryDate).getString(),
+                'MDEntryTime': group.getField(mdEntryTime).getString(),
             })
         self.snapshot_func(self.my_name, snapshot)
 
@@ -191,11 +192,15 @@ class FixApp(fix.Application):
 
                 symbol = fix.Symbol()
                 exchange = fix.SecurityExchange()
+                currency = fix.Currency()
                 pools.append({
                     'Symbol': group.getField(symbol).getString(),
                     'SecurityExchange':  group.getField(exchange).getString(),
+                    'Currency': group.getField(currency).getString(),
                 })
+
         self.instruments_func(self.my_name, pools)
+
 
 class Client:
     def __init__(self, config):
@@ -208,36 +213,35 @@ class Client:
         self.price_application.snapshot_func = self.on_full_snapshot
         self.price_application.incremental_func = self.on_incremental_snapshot
         self.instrument = {
-            'First': "BTC",
-            'Second': "USDT",
-            'Symbol': "BTCUSDT",
-            'SecurityID': "BTCUSDT",
+            'First': "ETH",
+            'Second': "USDC",
+            'Symbol': "ETHUSDC",
+            'SecurityID': "ETHUSDC",
             'SecurityType': "COIN",
-            'SecurityExchange': "SERUM",
+            'SecurityExchange': "Serum",
         }
 
     def on_event(self, data):
         print('! {}-{}'.format(data["broker"], data["event"]))
         if data["event"] is BrokerEvent.SessionLogon:
+
+            # do some logic
+            time.sleep(2)
             self.price_application.get_instruments()
-            self.price_application.subscribe(self.instrument, True)
-
-    def on_instruments(self, broker, pools):
-        for pool in pools:
-            print("POOL {}: {}".format(pool['SecurityExchange'], pool['Symbol']))
-
-    def on_full_snapshot(self, broker, snapshot):
-        print("{} | full for {}, rows {}".format(broker, snapshot['pool'], len(snapshot['data'])))
+            self.price_application.subscribe(self.instrument, True, True)
+            self.price_application.subscribe(self.instrument, True, False)
 
     def on_incremental_snapshot(self, broker, snapshot):
         print("{} | incr for {}, data {}".format(broker, snapshot['pool'], snapshot['data']))
 
-    def start_some_logic(self):
-        print("-----------------------------")
-        print("Subscribe-Unsubscribe test")
-        self.price_application.subscribe(self.instrument, 1, True, True)
-        time.sleep(30)
-        self.price_application.subscribe(self.instrument, 1, False)
+    def on_full_snapshot(self, broker, snapshot):
+        print("{} | full for {}, rows {}".format(broker, snapshot['pool'], len(snapshot['data'])))
+        for item in snapshot['data']:
+            print(item)
+
+    def on_instruments(self, broker, pools):
+        for pool in pools:
+            print("POOL {}: {}, Currency: {}".format(pool['SecurityExchange'], pool['Symbol'], pool['Currency']))
 
 
 if __name__ == '__main__':

@@ -1,9 +1,15 @@
 #pragma once
 
-#include "BrokerLib/IBrokerApplication.h"
-#include "BrokerLib/ISettings.h"
+#include <sharedlib/include/IBrokerApplication.h>
+#include <sharedlib/include/ISettings.h>
 #include <sharedlib/include/ILogger.h>
+#include <marketlib/include/market.h>
 #include <boost/format.hpp>
+
+using namespace std;
+using namespace marketlib;
+using namespace BrokerModels;
+
 
 class Logger: public ILogger
 {
@@ -76,6 +82,7 @@ private:
 	typedef std::string string;
 	typedef BrokerModels::Market Market;
     typedef IBrokerClient::BrokerEvent BrokerEvent;
+    typedef marketlib::execution_report_t ExecutionReport;
 
 protected:
 
@@ -87,6 +94,7 @@ public:
     void onEvent(const string &exchangeName, BrokerEvent, const string &details) override;
 	void onReport(const string &exchangeName, const string &symbol, const BrokerModels::MarketBook&) override;
     void onReport(const string &exchangeName, const string &symbol, const BrokerModels::DepthSnapshot&) override;
+    void onReport(const string& exchangeName, const string &symbol, const ExecutionReport&) override;
 	~BrokerNullApplication() = default;
 
 };
@@ -99,13 +107,24 @@ void BrokerNullApplication::onEvent(const string &exchangeName, BrokerEvent, con
 	logger->Info(details.c_str());
 }
 
-void BrokerNullApplication::onReport(const string &exchangeName, const string &symbol, const MarketBook &marketBook) {    
-    logger->Info((boost::format("%1%\nAsk(%2%) AskSize(%3%) --- Bid(%4%) BidSize(%5%)") 
+void BrokerNullApplication::onReport(const string &exchangeName, const string &symbol, const MarketBook &marketBook) {
+    time_t update_time = std::chrono::system_clock::to_time_t(marketBook.time);
+    struct tm *_tm = gmtime(&update_time);
+    std::chrono::system_clock::duration duration = marketBook.time.time_since_epoch();
+    auto milli_total = std::chrono::duration_cast<std::chrono::milliseconds> (duration).count();
+    int milli_since = milli_total % 1000;
+    char buff[64];
+    //  "timestamp": "2021-03-24 01:00:55.586",
+    sprintf(buff, "%.4d%.2d%.2d %.2d:%.2d:%.2d.%.3d",
+            _tm->tm_year+1900, _tm->tm_mon, _tm->tm_mday,_tm->tm_hour,_tm->tm_min,_tm->tm_sec, milli_since);
+
+    logger->Info((boost::format("%1%\nAsk(%2%) AskSize(%3%) --- Bid(%4%) BidSize(%5%), update_time(%6%)")
         % symbol 
         % marketBook.askPrice 
         % marketBook.askSize 
         % marketBook.bidPrice 
-        % marketBook.bidSize).str().c_str());
+        % marketBook.bidSize
+        % buff).str().c_str());
 }
 
 void BrokerNullApplication::onReport(const string &exchangeName, const string &symbol, const BrokerModels::DepthSnapshot& depth){
@@ -123,3 +142,30 @@ void BrokerNullApplication::onReport(const string &exchangeName, const string &s
     logger->Info(strs.str().c_str());
 };
 
+void BrokerNullApplication::onReport(const string& exchangeName, const string &symbol, const ExecutionReport& report) {
+    std::string state = "";
+    if ( report.state == order_state_t::ost_New ) {
+        state = "new";
+    }
+    else if ( report.state == order_state_t::ost_Filled ) {
+        state = "filled";
+    }
+    else if ( report.state == order_state_t::ost_Canceled ) {
+        state = "cancelled";
+    }
+    else if ( report.state == order_state_t::ost_Replaced ) {
+        state = "replaced";
+    }
+
+
+    logger->Info((boost::format("Symbol(%1%)\nType(%2%)\nSide(%3%)\nPrice(%4%)\nAmountExecuted(%5%)\nAmountRemaining(%6%)\nStatus(%7%)\nExchId(%8%)\n\n") 
+        % symbol
+        % (report.orderType == order_type_t::ot_Limit ? "limit" : "market")
+        % (report.side == order_side_t::os_Buy ? "buy" : "sell")
+        % report.limitPrice 
+        % report.cumQty
+        % report.leavesQty
+        % state
+        % report.exchId
+    ).str().c_str());
+}

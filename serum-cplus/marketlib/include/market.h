@@ -24,9 +24,16 @@ namespace marketlib
     {
         const std::string   engine;
         std::string     sec_id;
-        std::string    symbol;
-        std::string     currency;
-        int            tick_precision;
+        std::string     symbol;
+        std::string     base_currency;
+        std::string     quote_currency;
+        std::string     address;
+        std::string     program_id;
+        std::string     base_mint_address;
+        std::string     quote_mint_address;
+        int             tick_precision;
+        double          min_order_size;
+        bool            deprecated;
         const std::string& hash () const		{ return  sec_id;}
     };
 

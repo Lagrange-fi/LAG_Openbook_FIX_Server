@@ -198,8 +198,8 @@ namespace marketlib
 
     enum market_depth_t
     {
-        top = 0,
-        full = 1,
+        full=0,
+        top = 1,
     };
 
     /*

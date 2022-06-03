@@ -11,7 +11,7 @@ ssh user@185.95.16.202 -p 2222
 
 # Prerequisites
 ```bash
-sudo apt install build-essential cmake autoconf automake libtool-bin pkg-config zlib1g-dev gcc-6 g++-6
+sudo apt install build-essential cmake autoconf automake libtool-bin pkg-config zlib1g-dev libssl-dev libcurl4-openssl-dev gcc-6 g++-6
 sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-6 50 --slave /usr/bin/g++ g++ /usr/bin/g++-6
 sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-7 60 --slave /usr/bin/g++ g++ /usr/bin/g++-7
 sudo update-alternatives --config gcc
@@ -44,6 +44,12 @@ sudo ldconfig
 
 #compile error: need  fix https://stackoverflow.com/questions/46916875/error-when-building-fix-8
 #You have to explicitly #include <functional> in logger.hpp.
+
+# If an error occurs with the linking of the hftest library, then after running the commands "./bootstrap && ./configure" comment out the lines in fix8-1.4.1/test/Makefile :
+# bin_PROGRAMS = hftest$(EXEEXT) hfprint$(EXEEXT) $(am__EXEEXT_1)
+# hftest_LDFLAGS = $(ALL_LIBS) -lhftest $(am__append_13) $(am__append_18)
+# hfprint_LDFLAGS = $(ALL_LIBS) -lhftest $(am__append_14) $(am__append_19)
+# then continue installing the library, starting with "make" command
 ```
 ## Websocketpp
 ```bash
@@ -51,9 +57,7 @@ curl -L https://github.com/zaphoyd/websocketpp/archive/refs/tags/0.8.2.tar.gz -o
 tar -xzf websocketpp-0.8.2.tar.gz && cd websocketpp-0.8.2
 cmake .
 sudo make install
-
-#compile error: need  fix https://stackoverflow.com/questions/46916875/error-when-building-fix-8
-#You
+```
 
 # Cloning and compiling the source
 ```bash

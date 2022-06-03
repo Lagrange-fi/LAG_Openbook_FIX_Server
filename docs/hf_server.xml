@@ -6,41 +6,35 @@
 			    no_chksum="true"
 				active="true"
 				heartbeat_interval="10"
-				ip="127.0.0.1" 
-                                port="11001"
+				ip="0.0.0.0" 
+				port="11001"
 				sender_comp_id="Lagrange-fi"
 			    target_comp_id="Lagrange-fi-client"
 				tcp_nodelay="true"
 			    tcp_recv_buffer="100663296"
 			    tcp_send_buffer="100663296"
+			    session_log="session_log_md"
+			    protocol_log="protocol_log_md"
+			    persist="mem0"
 			    process_model="threaded" />
 
-	<persist name="bdb0"
-				type="bdb"
-				dir="./run"
-				db="hf_server.db"/>
+	<!--enum ProcessModel { pm_thread, pm_pipeline, pm_coro, pm_count }; coroutine-->
 
 	<persist name="mem0"
-				type="mem"/>
+			 type="mem" />
 
-	<log 		name="session_log"
-				type="session"
-				filename="|/bin/cat"
-				rotation="5"
-				flags="timestamp|sequence|compress|thread"/>
+	<!--enum Flags {mstart , sstart, sequence, thread, timestamp, minitimestamp, direction, level, location,
+		start_controls, append=start_controls, buffer, compress, pipe, broadcast, nolf, inbound, outbound, xml, num_flags };-->
 
-	<log 		name="protocol_log"
-				type="protocol"
-				filename="./run/hf_server_protocol.log"
-				rotation="5"
-				flags="sequence|append|direction|inbound|outbound"/>
+	<log 	name="session_log_md"
+			type="session"
+			filename="./logs_md/fix8_session.log"
+			flags="timestamp|sequence|compress|thread"/>
+s
+	<log 	name="protocol_log_md"
+			type="protocol"
+			filename="./logs_md/fix8_protocol.log"
+			flags="timestamp|append|inbound|outbound"/>
 
-	<log 		name="protocol_log_pipe"
-				type="protocol"
-				filename="|/bin/cat"
-				flags="sequence|append|direction|inbound|outbound"/>
-
-	<log 		name="protocol_log_null"
-				type="protocol"
-				filename="/dev/null"/>
+	<!--https://fix8.org/fix8/html/structFIX8_1_1SslContext.html: none, relaxed, strict, once-->
 </fix8>

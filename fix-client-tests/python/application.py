@@ -23,6 +23,7 @@ class FixApp(fix.Application):
         super(FixApp, self).__init__()
 
     def onCreate(self, sessionID):
+        print("onCreate:")
         return
 
     def onLogon(self, sessionID):

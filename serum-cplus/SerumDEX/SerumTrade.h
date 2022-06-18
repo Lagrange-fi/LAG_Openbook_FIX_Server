@@ -4,7 +4,6 @@
 #include <memory>
 #include <set>
 
-#include <sharedlib/include/IBrokerApplication.h>
 #include <sharedlib/include/ConnectionWrapper.h>
 #include <sharedlib/include/ISettings.h>
 #include <sharedlib/include/IListener.h>
@@ -21,29 +20,19 @@ private:
 	typedef std::string string;
 	typedef std::shared_ptr < ILogger > logger_ptr;
 	typedef std::shared_ptr < ISettings > settings_ptr;
-	typedef std::shared_ptr < IBrokerApplication > application_ptr;
 	typedef BrokerModels::Market Market;
 	typedef marketlib::order_t Order;
 	typedef marketlib::execution_report_t ExecutionReport;
 	typedef std::map < string, std::list< Order > > orders_map;
 	typedef marketlib::instrument_descr_t Instrument;
-
+	typedef std::function <void(const string&, const string&, const ExecutionReport&)> callback_t;
 
 protected:
-
-	// struct SubscribeChannel {
-	// 	string id;
-	// 	string name;
-	// 	string pair;
-	// 	BrokerModels::Instrument instrument;
-	// 	std::shared_ptr < Market > market;
-	// };
-
 	logger_ptr logger;
-	application_ptr application;
 	settings_ptr settings;
 	ConnectionWrapper < SerumTrade > connection;
 	orders_map orders;
+	SubscribedChannels channels;
 	
 
 	void onOpen();
@@ -61,7 +50,7 @@ protected:
 	bool activeCheck() const;
 
 public:
-	SerumTrade(logger_ptr, application_ptr, settings_ptr);
+	SerumTrade(logger_ptr, settings_ptr);
 
 	bool isEnabled() const override;
 	bool isConnected() const override;
@@ -70,8 +59,8 @@ public:
 	void start() override;
 	void stop() override;
 
-	void listen(const Instrument&) override;
-	void unlisten(const Instrument&) override;
+	void listen(const Instrument&, const string&, callback_t) override;
+	void unlisten(const Instrument&, const string&) override;
 
 	~SerumTrade();
 

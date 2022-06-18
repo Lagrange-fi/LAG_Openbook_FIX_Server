@@ -1,0 +1,84 @@
+<?xml version='1.0' encoding='ISO-8859-1'?>
+<fix8>
+	<session name="SERUM_MD"
+				role = "acceptor"
+				fix_version="4400"
+			    no_chksum="true"
+				active="true"
+				heartbeat_interval="10"
+				ip="0.0.0.0" 
+				port="11001"
+				sender_comp_id="Lagrange-fi-md"
+			    target_comp_id="Lagrange-fi-client-md"
+				tcp_nodelay="true"
+			    tcp_recv_buffer="100663296"
+			    tcp_send_buffer="100663296"
+			    session_log="session_log_md"
+			    protocol_log="protocol_log_md"
+                            reset_sequence_numbers="true"
+			    persist="mem0"
+			    process_model="threaded" />
+
+	<session name="SERUM_ORD_SAND"
+				role = "acceptor"
+				fix_version="4400"
+			    no_chksum="true"
+				active="true"
+				heartbeat_interval="10"
+				ip="0.0.0.0" 
+				port="11002"
+				sender_comp_id="Lagrange-fi-ord"
+			    target_comp_id="Lagrange-fi-client-ord"
+				tcp_nodelay="true"
+			    tcp_recv_buffer="100663296"
+			    tcp_send_buffer="100663296"
+			    session_log="session_log_ord"
+			    protocol_log="protocol_log_ord"
+			    reset_sequence_numbers="false"
+			    persist="file0"
+			    process_model="threaded" />
+
+	<session name="SERUM_ORD_SSL"
+				role = "acceptor"
+				fix_version="4400"
+			    no_chksum="true"
+				active="true"
+				heartbeat_interval="10"
+				ip="0.0.0.0" 
+				port="11003"
+				sender_comp_id="Lagrange-fi-ord"
+			    target_comp_id="Lagrange-fi-client-ord"
+				tcp_nodelay="true"
+			    tcp_recv_buffer="100663296"
+			    tcp_send_buffer="100663296"
+			    session_log="session_log_ord_ssl"
+			    protocol_log="protocol_log_ord_ssl"
+			    reset_sequence_numbers="false"
+			    persist="file0"
+			    process_model="threaded" />
+
+	<!--enum ProcessModel { pm_thread, pm_pipeline, pm_coro, pm_count }; coroutine-->
+
+	<persist name="mem0"
+			 type="mem" />
+
+	<persist name="file0"
+			 type="file" dir="./persist"
+			 use_session_id="true"
+			 db="server" />
+
+	<!--enum Flags {mstart , sstart, sequence, thread, timestamp, minitimestamp, direction, level, location,
+		start_controls, append=start_controls, buffer, compress, pipe, broadcast, nolf, inbound, outbound, xml, num_flags };-->
+
+	<log 	name="session_log_md"
+			type="session"
+			filename="./logs_md/fix8_session.log"
+			flags="timestamp|sequence|compress|thread"/>
+
+	<log 	name="protocol_log_md"
+			type="protocol"
+			filename="./logs_md/fix8_protocol.log"
+			flags="timestamp|append|inbound|outbound"/>
+
+	<!--https://fix8.org/fix8/html/structFIX8_1_1SslContext.html: none, relaxed, strict, once-->
+</fix8>

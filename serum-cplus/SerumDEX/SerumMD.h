@@ -4,9 +4,9 @@
 #include <memory>
 #include <set>
 #include <vector>
+#include <list>
 
 #include <sharedlib/include/IBrokerClient.h>
-#include <sharedlib/include/IBrokerApplication.h>
 #include <sharedlib/include/ConnectionWrapper.h>
 #include <sharedlib/include/ISettings.h>
 #include <sharedlib/include/IPoolsRequester.h>
@@ -23,11 +23,11 @@ private:
 	typedef std::shared_ptr < ILogger > logger_ptr;
 	typedef std::shared_ptr < ISettings > settings_ptr;
 	typedef std::shared_ptr < IPoolsRequester > pools_ptr;
-	typedef std::shared_ptr < IBrokerApplication > application_ptr;
 	typedef BrokerModels::Market Market;
 	typedef std::map < string,  BrokerModels::DepthSnapshot > depth_snapshots;
 	typedef marketlib::market_depth_t SubscriptionModel;
 	typedef marketlib::instrument_descr_t instrument;
+	typedef std::function <void(const string&, const string&, const std::any&)> callback_t;
 
 protected:
 
@@ -42,7 +42,7 @@ protected:
 	logger_ptr logger;
 	settings_ptr settings;
 	pools_ptr pools;
-    IBrokerApplication* application;
+	SubscribedChannels channels;
 	ConnectionWrapper < SerumMD > connection;
 	depth_snapshots depth_snapshot;
 	string name;
@@ -63,7 +63,7 @@ protected:
 	bool activeCheck() const;
 
 public:
-	SerumMD(logger_ptr,  IBrokerApplication*, settings_ptr, pools_ptr);
+	SerumMD(logger_ptr, settings_ptr, pools_ptr);
 
 	bool isEnabled() const override;
 	bool isConnected() const override;
@@ -72,8 +72,8 @@ public:
 	void start() override;
 	void stop() override;
 
-	void subscribe(const instrument&, SubscriptionModel) override;
-	void unsubscribe(const instrument&, SubscriptionModel) override;
+	void subscribe(const instrument&, SubscriptionModel, const string&, callback_t) override;
+	void unsubscribe(const instrument&, SubscriptionModel, const string&) override;
 	std::vector< instrument > getInstruments() override;
 
 	~SerumMD();

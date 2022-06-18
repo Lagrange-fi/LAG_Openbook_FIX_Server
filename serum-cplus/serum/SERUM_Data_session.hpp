@@ -10,7 +10,7 @@
 
 #include <marketlib/include/market.h>
 #include <marketlib/include/BrokerModels.h>
-#include <sharedlib/include/IBrokerApplication.h>
+#include <sharedlib/include/IBrokerClient.h>
 
 class ILogger;
 class ISettings;
@@ -18,8 +18,7 @@ class IBrokerClient;
 
 class SERUM_Data_session :
         public FIX8::Session ,
-        public FIX8::SERUM_Data::FIX8_SERUM_Data_Router,
-        public IBrokerApplication{
+        public FIX8::SERUM_Data::FIX8_SERUM_Data_Router {
 
 public:
     SERUM_Data_session(const FIX8::F8MetaCntx& ctx,
@@ -50,12 +49,6 @@ private:
     bool operator() (const class FIX8::SERUM_Data::SecurityListRequest *msg) const override;
     bool operator() (const class FIX8::SERUM_Data::MarketDataRequest *msg) const override;
 
-    // IBrokerApplication implementation
-    void onEvent (const std::string &exchangeName, IBrokerClient::BrokerEvent, const std::string &details) override;
-    void onReport(const std::string &exchangeName, const std::string &symbol, const BrokerModels::MarketBook&) override;
-    void onReport(const std::string &exchangeName, const std::string &symbol, const BrokerModels::DepthSnapshot&) override;
-    void onReport(const std::string& exchangeName, const std::string &symbol, const marketlib::execution_report_t&) override{}
-
     // FIX response implementation
     void securityList(const std::string& reqId, marketlib::security_request_result_t , const std::vector<marketlib::instrument_descr_t>& pools) ;
     void marketReject(const std::string& reqId, marketlib::ord_rej_reason reason) ;
@@ -69,6 +62,8 @@ private:
 private:
     std::shared_ptr < ILogger > _logger;
     std::shared_ptr < ISettings > _settings;
+    std::string _clientId;
+public:
     std::shared_ptr < IBrokerClient > _client;
 };
 

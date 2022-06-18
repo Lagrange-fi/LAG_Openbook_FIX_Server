@@ -3,4 +3,5 @@ Install  с++ libs: https://www.microsoft.com/en-us/download/confirmation.aspx?i
 Pip install quickfix-1.15.1-cp39-cp39-win_amd64.whl
 Pip install scipy
 
->>python application.py
+>>python test_data.py
+>>python test_trade.py

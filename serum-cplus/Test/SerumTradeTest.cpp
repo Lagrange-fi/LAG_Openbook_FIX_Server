@@ -15,11 +15,9 @@ typedef marketlib::instrument_descr_t Instrument;
 int main () {
     shared_ptr < ILogger > logger(new Logger);
     shared_ptr < ISettings > settings(new SerumSettings);
-    shared_ptr < IBrokerApplication > application(new BrokerNullApplication(logger));
 
     SerumTrade client(
         logger,
-        application,
         settings
     );
 
@@ -39,9 +37,13 @@ int main () {
         } else if (cmd == "quit") {
             break;
         } else if (cmd == "lst") {
-            client.listen(instrument);
+            client.listen(instrument, "Cli_1", [&logger](const string& exch, const string& id, const execution_report_t& report) 
+            {
+                logger->Info("Cli_1");
+                logger->Info(formatExecutionReport(exch, id, report).c_str());
+            });
         } else if (cmd == "ulst") {
-            client.unlisten(instrument);
+            client.unlisten(instrument, "Cli_1");
         } 
     }
 }

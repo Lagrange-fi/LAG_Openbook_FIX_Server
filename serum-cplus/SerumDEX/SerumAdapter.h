@@ -31,4 +31,8 @@ namespace SerumAdapter {
 		}
 		return OrderSide::os_Undefined;
 	}
+
+	static std::string getMarketFromInstrument(const instrument& instr) {
+		return instr.base_currency + "/" + instr.quote_currency;
+	}
 };

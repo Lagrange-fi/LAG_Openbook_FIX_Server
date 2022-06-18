@@ -3,7 +3,7 @@
 #include <string>
 #include <chrono>
 #include <map>
-#include <vector>
+#include <list>
 
 namespace BrokerModels {
     // struct Instrument {
@@ -38,8 +38,8 @@ namespace BrokerModels {
     };
 
     struct DepthSnapshot {
-        std::vector < MarketUpdate > bids;
-        std::vector < MarketUpdate > asks;
+        std::list < MarketUpdate > bids;
+        std::list < MarketUpdate > asks;
         std::chrono::time_point < std::chrono::system_clock > time;
         size_t sequence;
     };

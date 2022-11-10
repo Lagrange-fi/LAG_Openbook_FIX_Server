@@ -1,4 +1,7 @@
 #pragma once
+#include <curl/curl.h>
+#include <boost/json.hpp>
+// #include <boost/json/src.hpp>
 
 #include <sharedlib/include/IPoolsRequester.h>
 #include <sharedlib/include/ILogger.h>

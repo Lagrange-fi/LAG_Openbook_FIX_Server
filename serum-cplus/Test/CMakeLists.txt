@@ -4,6 +4,7 @@ find_package(Boost 1.79.0 REQUIRED)
 find_package(Websocketpp REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(CURL REQUIRED) 
+# find_package(GMP REQUIRED) 
 
 set(DEX_INCLUDES 
         ".."
@@ -40,3 +41,17 @@ target_link_libraries("SerumTradeTest" PRIVATE
     ${DEX_LIBRARIES}
     ${CMAKE_SOURCE_DIR}/build/SerumDEX/libfixserverSerumDEX.a
     )
+
+add_executable("SerumMarketTest" SerumMarketTest.cpp)
+target_include_directories("SerumMarketTest" PRIVATE
+    ${DEX_INCLUDES}
+    ${CMAKE_SOURCE_DIR}/SerumDEX
+    )
+target_link_libraries("SerumMarketTest" PRIVATE
+    ${DEX_LIBRARIES}
+    ${CMAKE_SOURCE_DIR}/build/SerumDEX/libfixserverSerumDEX.a
+    ${CMAKE_SOURCE_DIR}/build/base64/libbase64.a
+    ${CMAKE_SOURCE_DIR}/build/base58/libbase58.a
+    /usr/local/lib/libgmp.a
+    /usr/local/lib/libcryptopp.a
+   )

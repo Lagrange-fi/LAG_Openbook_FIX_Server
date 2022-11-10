@@ -1,10 +1,15 @@
 #pragma once
+#include "SerumAdapter.h"
 
 #include <unordered_map>
 #include <memory>
 #include <set>
 #include <vector>
 #include <list>
+#include <fstream>
+#include <iterator>
+#include <algorithm>
+
 
 #include <sharedlib/include/IBrokerClient.h>
 #include <sharedlib/include/ConnectionWrapper.h>
@@ -25,9 +30,12 @@ private:
 	typedef std::shared_ptr < IPoolsRequester > pools_ptr;
 	typedef BrokerModels::Market Market;
 	typedef std::map < string,  BrokerModels::DepthSnapshot > depth_snapshots;
+	typedef std::map < string,  BrokerModels::MarketBook > top_snapshots;
 	typedef marketlib::market_depth_t SubscriptionModel;
 	typedef marketlib::instrument_descr_t instrument;
-	typedef std::function <void(const string&, const string&, const std::any&)> callback_t;
+	typedef std::function <void(const string&, const instrument&, const BrokerModels::MarketBook&)> callbackTop;
+	typedef std::function <void(const string&, const instrument&, const BrokerModels::DepthSnapshot&)> callbackDepth;
+	typedef std::function <void(const string &exchangeName, marketlib::broker_event, const string &details)> callback_on_event;
 
 protected:
 
@@ -43,8 +51,10 @@ protected:
 	settings_ptr settings;
 	pools_ptr pools;
 	SubscribedChannels channels;
+	callback_on_event onEvent;
 	ConnectionWrapper < SerumMD > connection;
 	depth_snapshots depth_snapshot;
+	top_snapshots top_snapshot;
 	string name;
 	
 
@@ -63,7 +73,7 @@ protected:
 	bool activeCheck() const;
 
 public:
-	SerumMD(logger_ptr, settings_ptr, pools_ptr);
+	SerumMD(logger_ptr, settings_ptr, pools_ptr, callback_on_event);
 
 	bool isEnabled() const override;
 	bool isConnected() const override;
@@ -72,11 +82,15 @@ public:
 	void start() override;
 	void stop() override;
 
-	void subscribe(const instrument&, SubscriptionModel, const string&, callback_t) override;
+	void subscribe(const instrument&, const string&, callbackTop) override;
+	void subscribe(const instrument&, const string&, callbackDepth) override;
 	void unsubscribe(const instrument&, SubscriptionModel, const string&) override;
+	void unsubscribeForClientId(const string&) override;
 	std::vector< instrument > getInstruments() override;
 
 	~SerumMD();
 
+private:
+	void subscribe(const instrument&, SubscriptionModel);
 };
 

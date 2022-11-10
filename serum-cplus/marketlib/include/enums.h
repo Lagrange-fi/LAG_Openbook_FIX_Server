@@ -230,4 +230,19 @@ namespace marketlib
         rr_trade_along_required=9,
         rr_other=99
     };
+
+      enum broker_event {
+		info,
+		debug,
+		error,
+		session_logon,
+		session_logout,
+		coin_subscribed,
+		coin_unsubscribed,
+		connector_started,
+		connector_stopped,
+		coin_subscribed_fault,
+		coin_unsubscribed_fault,
+		subscribed_coin_is_not_valid
+	};
 }

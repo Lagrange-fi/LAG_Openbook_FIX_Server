@@ -1,15 +1,15 @@
 #include "SerumPoolsRequester.h"
-#include <marketlib/include/market.h>
-#include <curl/curl.h>
-// #include <boost/json/src.hpp>
-#include <boost/json.hpp>
+#include <boost/json/src.hpp>
 
 using namespace std;
 
 #define AS_STR(x) x.as_string().c_str()
 
 SerumPoolsRequester::SerumPoolsRequester(logger_ptr _logger, settings_ptr _settings):
-	logger(_logger), settings(_settings), pools() {}
+	logger(_logger), settings(_settings), pools() 
+{
+	loadPools();
+}
 
 std::vector<SerumPoolsRequester::Instrument> SerumPoolsRequester::getPoolsFromServer()
 {

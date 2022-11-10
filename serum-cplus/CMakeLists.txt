@@ -23,6 +23,7 @@ ExternalProject_Add(
     INSTALL_COMMAND "")
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
+# set(GMP_DIR "/usr/local/")
 
 string(CONCAT SERUM_NAME ${PROJECT_NAME} "serum")
 string(CONCAT SERUM_DEX_NAME ${PROJECT_NAME} "SerumDEX")
@@ -31,6 +32,8 @@ set(SHAREDLIB_NAME "shared")
 set(MARKETLIB_NAME "market")
 
 add_subdirectory(serum)
+add_subdirectory(base64)
+add_subdirectory(base58)
 add_subdirectory(SerumDEX)
 add_subdirectory(marketlib)
 add_subdirectory(sharedlib)

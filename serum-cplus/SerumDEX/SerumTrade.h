@@ -4,11 +4,15 @@
 #include <memory>
 #include <set>
 
+#include "SerumAdapter.h"
+#include <fstream>
+
 #include <sharedlib/include/ConnectionWrapper.h>
 #include <sharedlib/include/ISettings.h>
 #include <sharedlib/include/IListener.h>
 #include <marketlib/include/BrokerModels.h>
 #include <marketlib/include/market.h>
+#include <marketlib/include/enums.h>
 
 
 class SerumTrade : public IListener
@@ -26,6 +30,7 @@ private:
 	typedef std::map < string, std::list< Order > > orders_map;
 	typedef marketlib::instrument_descr_t Instrument;
 	typedef std::function <void(const string&, const string&, const ExecutionReport&)> callback_t;
+	typedef std::function <void(const string &exchangeName, marketlib::broker_event, const string &details)> callback_on_event;
 
 protected:
 	logger_ptr logger;
@@ -33,6 +38,7 @@ protected:
 	ConnectionWrapper < SerumTrade > connection;
 	orders_map orders;
 	SubscribedChannels channels;
+	callback_on_event onEvent;
 	
 
 	void onOpen();
@@ -50,17 +56,18 @@ protected:
 	bool activeCheck() const;
 
 public:
-	SerumTrade(logger_ptr, settings_ptr);
+	SerumTrade(logger_ptr, settings_ptr, callback_on_event);
 
 	bool isEnabled() const override;
 	bool isConnected() const override;
-	// string getName() const override;
+	string getName() const override;
 
 	void start() override;
 	void stop() override;
 
 	void listen(const Instrument&, const string&, callback_t) override;
 	void unlisten(const Instrument&, const string&) override;
+	void unlistenForClientId(const string&) override;
 
 	~SerumTrade();
 

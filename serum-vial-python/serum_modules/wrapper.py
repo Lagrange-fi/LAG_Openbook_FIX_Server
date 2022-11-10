@@ -14,6 +14,7 @@ from pyserum.enums import OrderType, Side
 
 
 from solana.rpc.types import TxOpts
+import solders.keypair as skeypair
 from solana.keypair import Keypair
 from solana.publickey import PublicKey
 from solana.rpc.api import Client
@@ -27,7 +28,7 @@ REST_URL = 'https://solana-api.projectserum.com'
 
 class Wrapper:
     def __init__(self, keypair, logger, message_event, information_event):
-        self.__owner = Keypair(decode(keypair)[:32])
+        self.__owner = Keypair(skeypair.Keypair().from_base58_string(keypair))
         self.__message_event = message_event
         self.__information_event = information_event
         self.__logger = logger

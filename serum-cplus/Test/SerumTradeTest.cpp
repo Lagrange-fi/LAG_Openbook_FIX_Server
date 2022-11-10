@@ -18,7 +18,8 @@ int main () {
 
     SerumTrade client(
         logger,
-        settings
+        settings,
+        [&logger](const string& exch, broker_event event, const string& info) {}
     );
 
     Instrument instrument{"", "", "ETH/USDC", "ETH", "USDC" };

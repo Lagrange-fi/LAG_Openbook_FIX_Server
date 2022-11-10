@@ -22,6 +22,7 @@ public:
 	{
 		string clientId;
 		string market;
+		Instrument instr;
 		callback_t callback;
 	};
 
@@ -42,6 +43,13 @@ public:
                     SubscribeChannel,
 					boost::multi_index::member<SubscribeChannel, decltype(SubscribeChannel::market), &SubscribeChannel::market >
                 >
+            >,
+			boost::multi_index::hashed_non_unique<
+                boost::multi_index::tag<struct SubscribeChannelsByClient>,
+                boost::multi_index::composite_key<
+                    SubscribeChannel,
+					boost::multi_index::member<SubscribeChannel, decltype(SubscribeChannel::clientId), &SubscribeChannel::clientId >
+                >
             >
         >
     >;
@@ -52,13 +60,14 @@ public:
 
 	virtual bool isEnabled() const = 0;
 	virtual bool isConnected() const = 0;
-	// virtual string getName() const = 0;
+	virtual string getName() const = 0;
 
 	virtual void start() = 0;
 	virtual void stop() = 0;
 
 	virtual void listen(const Instrument&, const string&, callback_t) = 0;
 	virtual void unlisten(const Instrument&, const string&) = 0;
+	virtual void unlistenForClientId(const string&) = 0;
 
 	virtual ~IListener() = default;
 };

@@ -9,6 +9,7 @@
 #include <fstream>
 #include <iterator>
 #include <algorithm>
+#include <any>
 
 
 #include <sharedlib/include/IBrokerClient.h>
@@ -33,8 +34,7 @@ private:
 	typedef std::map < string,  BrokerModels::MarketBook > top_snapshots;
 	typedef marketlib::market_depth_t SubscriptionModel;
 	typedef marketlib::instrument_descr_t instrument;
-	typedef std::function <void(const string&, const instrument&, const BrokerModels::MarketBook&)> callbackTop;
-	typedef std::function <void(const string&, const instrument&, const BrokerModels::DepthSnapshot&)> callbackDepth;
+	typedef std::function <void(const string&, const instrument&, const std::any&)> callback;
 	typedef std::function <void(const string &exchangeName, marketlib::broker_event, const string &details)> callback_on_event;
 
 protected:
@@ -82,11 +82,12 @@ public:
 	void start() override;
 	void stop() override;
 
-	void subscribe(const instrument&, const string&, callbackTop) override;
-	void subscribe(const instrument&, const string&, callbackDepth) override;
+	// void subscribe(const instrument&, const string&, callbackTop) override;
+	// void subscribe(const instrument&, const string&, callbackDepth) override;
+	void subscribe(const instrument&, SubscriptionModel, const string&, callback) override;
 	void unsubscribe(const instrument&, SubscriptionModel, const string&) override;
 	void unsubscribeForClientId(const string&) override;
-	std::vector< instrument > getInstruments() override;
+	std::list< instrument > getInstruments() override;
 
 	~SerumMD();
 

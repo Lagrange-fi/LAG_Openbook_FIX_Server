@@ -5,7 +5,13 @@
 #include "alphabets.h"
 #include <gmpxx.h>
 
-std::string base58_decode(const std::string& vec_, const std::map<char, uint8_t>& alphabet_map = BITCOIN_ALPHABET_MAP);
+enum Alphabet
+{
+    Bitcoin,
+};
+
+std::string base58_decode(const std::string& vec_, Alphabet alph = Alphabet::Bitcoin);
+std::string base58_encode(const std::string& vec_, Alphabet alph = Alphabet::Bitcoin);
 
 // class Base58
 // {

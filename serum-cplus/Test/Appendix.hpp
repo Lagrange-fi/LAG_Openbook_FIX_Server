@@ -3,7 +3,11 @@
 #include <sharedlib/include/ISettings.h>
 #include <sharedlib/include/ILogger.h>
 #include <marketlib/include/market.h>
+#include <marketlib/include/BrokerModels.h>
 #include <boost/format.hpp>
+#include <iostream>
+#include <sstream>
+#include <instruments/converter.hpp>
 
 using namespace std;
 using namespace marketlib;
@@ -61,12 +65,12 @@ public:
 
     string get(Property property) const override {
         switch (property) {
-        case Property::ExchangeName:
-            return "Serum";
-        case Property::WebsocketEndpoint:
-            return "wss://api.serum-vial.dev/v1/ws";
-        default:
-            return "";
+            case Property::ExchangeName:
+                return "Serum";
+            case Property::WebsocketEndpoint:
+                return "wss://vial.mngo.cloud/v1/ws";
+            default:
+                return "";
         }
     }
 };
@@ -95,7 +99,7 @@ string formatExecutionReport(const string& exchangeName, const string &symbol, c
         % report.cumQty
         % report.leavesQty
         % state
-        % report.exchId
+        % uint128toa(report.exchId)
     ).str().c_str();
 }
 

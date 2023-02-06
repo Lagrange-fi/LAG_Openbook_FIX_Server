@@ -11,7 +11,7 @@ ssh user@185.95.16.202 -p 2222
 
 # Prerequisites
 ```bash
-sudo apt install build-essential cmake autoconf automake libtool-bin pkg-config zlib1g-dev libssl-dev libcurl4-openssl-dev curl gcc-6 g++-6
+sudo apt install build-essential cmake autoconf automake libtool-bin pkg-config zlib1g-dev libssl-dev libcurl4-openssl-dev libgmp-dev unzip curl gcc-6 g++-6
 sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-6 50 --slave /usr/bin/g++ g++ /usr/bin/g++-6
 sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-7 60 --slave /usr/bin/g++ g++ /usr/bin/g++-7
 sudo update-alternatives --config gcc
@@ -29,8 +29,7 @@ sudo ldconfig
 ```bash
 curl -LO https://github.com/pocoproject/poco/archive/poco-1.9.4-release.tar.gz
 tar -xzf poco-1.9.4-release.tar.gz && cd poco-poco-1.9.4-release/
-mkdir cmake-build && cd cmake-build/
-cmake ..
+mkdir cmake-build && cd cmake-build/ && cmake ..
 sudo cmake --build . --target install
 sudo ldconfig
 ```
@@ -90,7 +89,7 @@ sudo make install
 # Cloning and compiling the source
 ```bash
 git clone --recurse-submodules https://github.com/TradingForge/SerumFixServer.git
-cd serum_cplus
+cd serum-cplus
 mkdir build && cd build
 cmake ..
 cmake --build . --config Debug --target all -- -j 6

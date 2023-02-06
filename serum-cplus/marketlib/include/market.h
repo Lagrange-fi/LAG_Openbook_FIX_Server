@@ -22,7 +22,7 @@ namespace marketlib
     */
     struct instrument_descr_t
     {
-        const std::string   engine;
+        std::string     engine;
         std::string     sec_id;
         std::string     symbol;
         std::string     base_currency;
@@ -72,9 +72,9 @@ namespace marketlib
     struct execution_report_t
     {
         std::string     tradeId ;
-        std::string     clId ;
+        uint64_t         clId ;
         std::string     origClId;
-        std::string     exchId;
+        __uint128_t     exchId;
         std::string     secId;
         time_t          time ;
         order_type_t    orderType ;
@@ -95,10 +95,10 @@ namespace marketlib
 
     struct order_t
     {
-        std::string owner;
-        std::string clId;
-        std::string exchId;
+        uint64_t clId;
+        __uint128_t exchId;
         std::string secId;
+        std::string transaction_hash;
         double original_qty  = 0.0;
         double remaining_qty = 0.0;
         double price     = 0.0;

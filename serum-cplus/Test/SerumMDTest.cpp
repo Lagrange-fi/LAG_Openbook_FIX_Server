@@ -3,7 +3,7 @@
 #include <atomic>
 
 #include <SerumDEX/SerumMD.h>
-#include <SerumDEX/SerumPoolsRequester.h>
+#include <SerumDEX/PoolRequester/PoolsRequester.h>
 // #include <SerumDEX/SerumAdapter.h>
 #include <marketlib/include/BrokerModels.h>
 #include <marketlib/include/enums.h>
@@ -18,7 +18,7 @@ typedef marketlib::instrument_descr_t Instrument;
 int main () {
     shared_ptr < ILogger > logger(new Logger);
     shared_ptr < ISettings > settings(new SerumSettings);
-    shared_ptr < IPoolsRequester > pools(new SerumPoolsRequester(logger, settings));
+    shared_ptr < IPoolsRequester > pools(new PoolsRequester(logger, settings));
 
     SerumMD client(
         logger,

@@ -23,6 +23,6 @@ public:
 	IMarket& operator=(const IMarket&) = delete;
     virtual ~IMarket() = default;
 
-    virtual void send_new_order(const Instrument& instrument, const Order& order) = 0;
-    virtual void cancel_order(const Instrument& instrument, const Order& order) = 0;
+    virtual Order send_new_order(const Instrument& instrument, const Order& order) = 0;
+    virtual Order cancel_order(const Instrument& instrument, const Order& order) = 0;
 };

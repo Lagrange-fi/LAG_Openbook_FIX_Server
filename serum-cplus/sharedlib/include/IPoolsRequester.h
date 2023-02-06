@@ -1,6 +1,6 @@
 #pragma once
 
-#include <vector>
+#include <list>
 #include <marketlib/include/market.h>
 
 class IPoolsRequester 
@@ -13,9 +13,10 @@ protected:
         ((std::string*)result)->append((char*)content, size * count);
         return size * count;
     }
-
+    
 public:
-    virtual std::vector<Instrument> getPools() = 0;
+    virtual std::list<Instrument> getPools() = 0;
+    virtual const Instrument& getPool(const Instrument&) = 0;
     virtual void loadPools() = 0;
     virtual ~IPoolsRequester() = default;
 };

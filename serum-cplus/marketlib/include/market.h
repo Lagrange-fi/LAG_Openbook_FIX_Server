@@ -95,6 +95,7 @@ namespace marketlib
 
     struct order_t
     {
+        std::string owner;
         uint64_t clId;
         __uint128_t exchId;
         std::string secId;
@@ -109,6 +110,10 @@ namespace marketlib
         order_type_t type  = ot_Undefined;
         time_t init_time = 0;
         std::string currency;
+        bool isCompleted() const noexcept {
+            return state==order_state_t::ost_Filled
+            ||state==order_state_t::ost_Canceled
+            ||state==order_state_t::ost_Cancel_Rejected;}
     };
 
     struct order_update_t

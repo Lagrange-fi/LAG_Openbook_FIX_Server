@@ -10,22 +10,22 @@ using namespace marketlib;
 
 void SerumTrade::onOpen() {
 #ifdef SERUM_LISTENER_DEBUG
-logger_->Debug("> SerumTrade::onOpen");
+_logger->Debug("> SerumTrade::onOpen");
 #endif
-	onEvent_(getName(), broker_event::session_logon, "TradeLogon: " + getName());
+	_onEvent(getName(), broker_event::session_logon, "TradeLogon: " + getName());
 }
 void SerumTrade::onClose() {
 #ifdef SERUM_LISTENER_DEBUG
-	logger_->Debug("> SerumTrade::onClose");
+	_logger->Debug("> SerumTrade::onClose");
 #endif
-	onEvent_(getName(), broker_event::session_logout, "TradeLogout: " + getName());
+	_onEvent(getName(), broker_event::session_logout, "TradeLogout: " + getName());
 	clearMarkets();
 }
 void SerumTrade::onFail() {
 #ifdef SERUM_LISTENER_DEBUG
-logger_->Debug("> SerumTrade::onFail");
+_logger->Debug("> SerumTrade::onFail");
 #endif
-	onEvent_(getName(), broker_event::session_logout, "TradeLogout: " + getName());
+	_onEvent(getName(), broker_event::session_logout, "TradeLogout: " + getName());
 	clearMarkets();
 }
 void SerumTrade::onMessage(const string& message) {
@@ -44,7 +44,7 @@ void SerumTrade::onEventHandler(const string &message) {
 	std::string type = parsed_data.at("type").as_string().c_str();
 #ifdef SERUM_LISTENER_DEBUG
 if (type == "subscribed" || type == "unsubscribed") {
-	logger_->Debug(message.c_str());
+	_logger->Debug(message.c_str());
 } 
 #endif
 	if (type == "subscribed" || type == "unsubscribed")
@@ -69,8 +69,8 @@ if (type == "subscribed" || type == "unsubscribed") {
 		};
 
 		if (type  == "l3snapshot") {
-			orders_[market] = std::list<Order>{};
-			auto& orders_list = orders_[market];
+			_orders[market] = std::list<Order>{};
+			auto& orders_list = _orders[market];
 			for (const auto &set : parsed_data.at("asks").as_array()) {
 				addOrderToList(set, orders_list);
 			};
@@ -79,11 +79,11 @@ if (type == "subscribed" || type == "unsubscribed") {
 			};
 		}
 		else {
-			addOrderToList(parsed_data, orders_[market]);
+			addOrderToList(parsed_data, _orders[market]);
 		}
 		
 	} else if (type  == "change") {
-		auto& orders_lst = orders_[market];
+		auto& orders_lst = _orders[market];
 		auto exch_id = atouint128(parsed_data.at("orderId").as_string().c_str());
 		auto order = find_if(orders_lst.begin(), orders_lst.end(), [exch_id](auto a) {
 			return a.exchId == exch_id;
@@ -105,12 +105,12 @@ if (type == "subscribed" || type == "unsubscribed") {
 		report.leavesQty = order->original_qty;
 
 		// application->onReport(settings->get(ISettings::Property::ExchangeName), market, std::move(report));
-		auto chnls = channels_
+		auto chnls = _channels
 			.get<SubscribeChannelsByMarket>()
 			.equal_range(boost::make_tuple(market));
 		while(chnls.first != chnls.second) {
 			chnls.first->callback(
-				settings_->get(ISettings::Property::ExchangeName),
+				_settings->get(ISettings::Property::ExchangeName),
 				market,
 				report
 			);
@@ -118,7 +118,7 @@ if (type == "subscribed" || type == "unsubscribed") {
   		}
 	}
 	else if (type == "done") {
-		auto& orders_lst = orders_[market];
+		auto& orders_lst = _orders[market];
 		auto exch_id = atouint128(parsed_data.at("orderId").as_string().c_str());
 		auto order = find_if(orders_lst.begin(), orders_lst.end(), [exch_id](auto a) {
 			return a.exchId == exch_id;
@@ -143,12 +143,12 @@ if (type == "subscribed" || type == "unsubscribed") {
 			report.state = is_canceled ? order_state_t::ost_Canceled : order_state_t::ost_Filled;
 			report.side = stringToOrderSide(parsed_data.at("side").as_string().c_str());
 
-			auto chnls = channels_
+			auto chnls = _channels
 			.get<SubscribeChannelsByMarket>()
 			.equal_range(boost::make_tuple(market));
 			while(chnls.first != chnls.second) {
 				chnls.first->callback(
-					settings_->get(ISettings::Property::ExchangeName),
+					_settings->get(ISettings::Property::ExchangeName),
 					market,
 					report
 				);
@@ -169,12 +169,12 @@ if (type == "subscribed" || type == "unsubscribed") {
 		report.leavesQty = order->original_qty - remaining;
 		report.cumQty = remaining;
 		
-		auto chnls = channels_
+		auto chnls = _channels
 			.get<SubscribeChannelsByMarket>()
 			.equal_range(boost::make_tuple(market));
 		while(chnls.first != chnls.second) {
 			chnls.first->callback(
-				settings_->get(ISettings::Property::ExchangeName),
+				_settings->get(ISettings::Property::ExchangeName),
 				market,
 				report
 			);
@@ -190,14 +190,14 @@ void SerumTrade::onUpdateHandler(const string &message) {
 
 bool SerumTrade::enabledCheck() const {
 	if (!isEnabled()) {
-		logger_->Warn("Attempt to request disabled client");
+		_logger->Warn("Attempt to request disabled client");
 	}
 	return isEnabled();
 }
 
 bool SerumTrade::connectedCheck() const {
 	if (!isConnected()) {
-		logger_->Warn("Attempt to request disconnected client");
+		_logger->Warn("Attempt to request disconnected client");
 	}
 	return isConnected();
 }
@@ -207,48 +207,48 @@ bool SerumTrade::activeCheck() const {
 }
 
 SerumTrade::SerumTrade(logger_ptr logger, settings_ptr settings, callback_on_event OnEvent):
-	logger_(logger), connection_(this, settings->get(ISettings::Property::WebsocketEndpoint), logger), 
-	settings_(settings), onEvent_(OnEvent) {}
+	_logger(logger), _connection(this, settings->get(ISettings::Property::WebsocketEndpoint), logger), 
+	_settings(settings), _onEvent(OnEvent) {}
 
 bool SerumTrade::isEnabled() const {
-	return connection_.enabled;
+	return _connection.enabled;
 }
 
 bool SerumTrade::isConnected() const {
-	return connection_.connected;
+	return _connection.connected;
 }
 
 void SerumTrade::clearMarkets() {
 #ifdef SERUM_LISTENER_DEBUG
 	// logger_->Debug("> SerumTrade::clearMarkets");
 #endif
-	orders_.clear();
-	channels_.clear();
+	_orders.clear();
+	_channels.clear();
 }
 
 void SerumTrade::start() {
-	connection_.async_start();
+	_connection.async_start();
 }
 void SerumTrade::stop() {
-	connection_.async_stop();
+	_connection.async_stop();
 	clearMarkets();
 }
 
 void SerumTrade::listen(const SerumTrade::Instrument& instr, const string& clientId, callback_t callback) {
-	auto chnls = channels_
+	auto chnls = _channels
 		.get<SubscribeChannelsByMarket>()
 		.equal_range(boost::make_tuple(
 			getMarketFromInstrument(instr)
 		));
 
 	if (chnls.first == chnls.second) {
-		connection_.async_send((boost::format(R"({
+		_connection.async_send((boost::format(R"({
 			"op": "subscribe",
 			"channel": "level3",
 			"markets": ["%1%"]
 		})") % getMarketFromInstrument(instr)).str());
 	}
-	channels_.insert(
+	_channels.insert(
 		SubscribeChannel{
 			clientId,
 			getMarketFromInstrument(instr),
@@ -259,26 +259,26 @@ void SerumTrade::listen(const SerumTrade::Instrument& instr, const string& clien
 }
 
 void SerumTrade::unlisten(const SerumTrade::Instrument& instr, const string& clientId) {
-	auto chnl = channels_
+	auto chnl = _channels
 		.get<SubscribeChannelsByClientAndMarket>()
 		.find(boost::make_tuple(
 			clientId,
 			getMarketFromInstrument(instr)
 		));
 
-	if (chnl == channels_.end()) {
-		logger_->Error("Subscription not found");
+	if (chnl == _channels.end()) {
+		_logger->Error("Subscription not found");
 		return;
 	}
 
-	channels_.erase(chnl);
-	auto chnls = channels_
+	_channels.erase(chnl);
+	auto chnls = _channels
 		.get<SubscribeChannelsByMarket>()
 		.equal_range(boost::make_tuple(
 			getMarketFromInstrument(instr)
 		));
 	if (chnls.first == chnls.second) {
-		connection_.async_send((boost::format(R"({
+		_connection.async_send((boost::format(R"({
 			"op": "unsubscribe",
 			"channel": "level3",
 			"markets": ["%1%"]
@@ -287,7 +287,7 @@ void SerumTrade::unlisten(const SerumTrade::Instrument& instr, const string& cli
 }
 
 void SerumTrade::unlistenForClientId(const string& clientId) {
-	auto chnls = channels_
+	auto chnls = _channels
 		.get<SubscribeChannelsByClient>()
 		.equal_range(boost::make_tuple(
 			clientId
@@ -300,10 +300,10 @@ void SerumTrade::unlistenForClientId(const string& clientId) {
 }
 
 string SerumTrade::getName() const {
-	return settings_->get(ISettings::Property::ExchangeName);
+	return _settings->get(ISettings::Property::ExchangeName);
 }
 
 SerumTrade::~SerumTrade() {
-	connection_.async_stop();
+	_connection.async_stop();
 	while (isConnected()) continue;
 }

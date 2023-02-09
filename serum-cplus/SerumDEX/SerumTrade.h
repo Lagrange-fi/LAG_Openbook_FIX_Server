@@ -35,12 +35,12 @@ private:
 	typedef std::function <void(const string &exchangeName, marketlib::broker_event, const string &details)> callback_on_event;
 
 protected:
-	logger_ptr logger_;
-	settings_ptr settings_;
-	ConnectionWrapper < SerumTrade > connection_;
-	orders_map orders_;
-	SubscribedChannels channels_;
-	callback_on_event onEvent_;
+	logger_ptr _logger;
+	settings_ptr _settings;
+	ConnectionWrapper < SerumTrade > _connection;
+	orders_map _orders;
+	SubscribedChannels _channels;
+	callback_on_event _onEvent;
 	
 
 	void onOpen();

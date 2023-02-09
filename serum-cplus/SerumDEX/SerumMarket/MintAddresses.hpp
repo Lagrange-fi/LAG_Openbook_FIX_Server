@@ -13,12 +13,12 @@ private:
     typedef std::string string;
 
 public:
-    MintAdresses(logger_ptr logger_): logger(logger_) { loadAdresses();};
+    MintAdresses(logger_ptr logger_): _logger(logger_) { loadAdresses();};
     ~MintAdresses() { _mint_addresses.clear(); };
 
     const string& get_address_for_token(const string& token)  {return _mint_addresses[token];}; 
 private:
-    logger_ptr logger;
+    logger_ptr _logger;
     std::map<string, string> _mint_addresses;
 
     void loadAdresses()

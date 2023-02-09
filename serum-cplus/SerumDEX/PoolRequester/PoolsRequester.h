@@ -30,12 +30,13 @@ public:
     ~PoolsRequester() override {};
 
 private:
-    logger_ptr logger;
-    settings_ptr settings;
-    InstrumentsJson pools;
-    std::string path;
+    logger_ptr _logger;
+    settings_ptr _settings;
+    InstrumentsJson _pools;
+    std::string _path;
     // std::vector< Instrument > pools;
-    std::list< Pool > pools_list;
+    std::list< Pool > _pools_list;
+
     void loadPoolList();
     void savePoolsToJson();
     void loadPoolsFromJson();

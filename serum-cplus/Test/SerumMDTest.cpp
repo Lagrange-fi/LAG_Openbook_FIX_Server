@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include <atomic>
+#include <any>
 
 #include <SerumDEX/SerumMD.h>
 #include <SerumDEX/PoolRequester/PoolsRequester.h>
@@ -43,26 +44,26 @@ int main () {
         } else if (cmd == "quit") {
             break;
         } else if (cmd == "st") {
-            client.subscribe(instrument, "Cli_1", [&logger](const string& exch, const Instrument& instr, const MarketBook& data)
+            client.subscribe(instrument, market_depth_t::top, "Cli_1",  [&logger](const string& exch, const string& symbol, const std::any& data)
             {
                 logger->Info("Cli_1");
-                logger->Info(formatTopInfo(exch, instr.symbol, data).c_str());
+                logger->Info(formatTopInfo(exch, symbol, std::any_cast<BrokerModels::MarketBook>(data)).c_str());
             });
         } else if (cmd == "ut") {
             client.unsubscribe(instrument, market_depth_t::top, "Cli_1");
         } else if (cmd == "st2") {
-            client.subscribe(instrument, "Cli_2", [&logger](const string& exch, const Instrument& instr, const MarketBook& data)
+            client.subscribe(instrument, market_depth_t::top, "Cli_2", [&logger](const string& exch, const string& symbol, const std::any& data)
             {
                 logger->Info("Cli_2");
-                logger->Info(formatTopInfo(exch, instr.symbol, data).c_str());
+                logger->Info(formatTopInfo(exch, symbol, std::any_cast<BrokerModels::MarketBook>(data)).c_str());
             });
         } else if (cmd == "ut2") {
             client.unsubscribe(instrument, market_depth_t::top, "Cli_2");
         }else if (cmd == "sd") {
-            client.subscribe(instrument, "Cli_1", [&logger](const string& exch, const Instrument& instr, const DepthSnapshot& data)
+            client.subscribe(instrument, market_depth_t::full, "Cli_1", [&logger](const string& exch, const string& symbol, const std::any& data)
             {
                 logger->Info("Cli_1");
-                logger->Info(formatDepthInfo(exch,  instr.symbol, data).c_str());
+                logger->Info(formatDepthInfo(exch,  symbol, std::any_cast<BrokerModels::DepthSnapshot>(data)).c_str());
             });
         } else if (cmd == "ud") {
             client.unsubscribe(instrument, market_depth_t::full, "Cli_1");

@@ -5,8 +5,8 @@ using namespace std;
 
 #define AS_STR(x) x.as_string().c_str()
 
-PoolsRequester::PoolsRequester(logger_ptr _logger, settings_ptr _settings, std::string _path):
-	logger(_logger), settings(_settings), pools(), path(_path)
+PoolsRequester::PoolsRequester(logger_ptr logger, settings_ptr settings, std::string path):
+	_logger(logger), _settings(settings), _pools(), _path(path)
 {
 	loadPoolList(); 
 	loadPoolsFromJson();
@@ -29,25 +29,25 @@ void PoolsRequester::loadPoolList()
 			result = curl_easy_perform(curl);
 			// Error check
 			if (result != CURLE_OK) {
-				logger->Error("curl_easy_perform() error");
+				_logger->Error("curl_easy_perform() error");
 				response.clear();
 				throw ;
 			}
 
 			curl_easy_cleanup(curl);
 		} else {
-			logger->Error("curl_easy_init() error");
+			_logger->Error("curl_easy_init() error");
 			throw ;
 		}
 	}
 	catch(int e) {
-		pools_list = std::list< Pool >();
+		_pools_list = std::list< Pool >();
 	}
 
-	pools_list = std::list< Pool >();
+	_pools_list = std::list< Pool >();
 	auto parsed_data = boost::json::parse(response);
 	for( auto pool : parsed_data.as_array()) {
-		pools_list.push_back(
+		_pools_list.push_back(
 			PoolsRequester::Pool{
 				name:	AS_STR(pool.at("name")), 
 				address: AS_STR(pool.at("address")), 
@@ -76,24 +76,24 @@ PoolsRequester::Instrument PoolsRequester::getPoolInfoFromServer(const Pool& poo
 			result = curl_easy_perform(curl);
 			// Error check
 			if (result != CURLE_OK) {
-				logger->Error("curl_easy_perform() error");
+				_logger->Error("curl_easy_perform() error");
 				response.clear();
 				throw ;
 			}
 
 			curl_easy_cleanup(curl);
 		} else {
-			logger->Error("curl_easy_init() error");
+			_logger->Error("curl_easy_init() error");
 			throw ;
 		}
 	}
 	catch(int e) {
-		pools_list = std::list< Pool >();
+		_pools_list = std::list< Pool >();
 	}
 
 	auto parsed_data = boost::json::parse(response);
 	return Instrument{
-		engine:	settings->get(ISettings::Property::ExchangeName), 
+		engine:	_settings->get(ISettings::Property::ExchangeName), 
 		sec_id: "", 
 		symbol: pool_info.name, 
 		base_currency: 	AS_STR(parsed_data.at("baseSymbol")),
@@ -110,28 +110,28 @@ PoolsRequester::Instrument PoolsRequester::getPoolInfoFromServer(const Pool& poo
 
 const PoolsRequester::Instrument& PoolsRequester::getPool(const Instrument& instrument) 
 {
-	if (pools.InstrumentsList().size()) {
-		auto pool = std::find_if(pools.InstrumentsList().begin(), pools.InstrumentsList().end(), [&instrument](const InstrumentJson& i){ 
+	if (_pools.InstrumentsList().size()) {
+		auto pool = std::find_if(_pools.InstrumentsList().begin(), _pools.InstrumentsList().end(), [&instrument](const InstrumentJson& i){ 
 			return instrument.base_currency == i.GetInstrument().base_currency && 
 				instrument.quote_currency == i.GetInstrument().quote_currency;
 		});
 
-		if (pool != std::end(pools.InstrumentsList()))
+		if (pool != std::end(_pools.InstrumentsList()))
 			return *pool;
 	}
 	auto name = instrument.base_currency + "/" + instrument.quote_currency;
 
-	auto p = std::find_if(pools_list.begin(), pools_list.end(), [&name] (const Pool& p) {
+	auto p = std::find_if(_pools_list.begin(), _pools_list.end(), [&name] (const Pool& p) {
 		return p.name == name;
 	});
 
-	if (p == std::end(pools_list))
+	if (p == std::end(_pools_list))
 		throw "Pool is not enabled";
 	
 	auto new_pool = getPoolInfoFromServer(*p);
-	pools.PushBackInstrument(new_pool);
+	_pools.PushBackInstrument(new_pool);
 	savePoolsToJson();
-	return pools.InstrumentsList().back();
+	return _pools.InstrumentsList().back();
 }
 
 void PoolsRequester::loadPools() {
@@ -140,19 +140,19 @@ void PoolsRequester::loadPools() {
 
 void PoolsRequester::loadPoolsFromJson() 
 {
-	pools.DeserializeFromFile(path);
+	_pools.DeserializeFromFile(_path);
 }
 
 void PoolsRequester::savePoolsToJson()
 {
-	pools.SerializeToFile(path);
+	_pools.SerializeToFile(_path);
 }
 
 std::list<PoolsRequester::Instrument> PoolsRequester::getPools() 
 {
 	std::list<PoolsRequester::Instrument> newpools;
 	
-	for( const auto& p: pools.InstrumentsList() ) {
+	for( const auto& p: _pools.InstrumentsList() ) {
 		newpools.push_back(p.GetInstrument());
 	}
 	return newpools;

@@ -93,7 +93,7 @@ SERUM_Data_session::SERUM_Data_session(const FIX8::F8MetaCntx& ctx,
         FIX8::SERUM_Data::FIX8_SERUM_Data_Router(),
         _logger(new TestLogger),
         _settings(new SerumSettings),
-        _client( std::shared_ptr <IBrokerClient>(new SerumMD(_logger,_settings, std::make_shared< PoolsRequester >( _logger, _settings ) , [](const std::string &exchangeName, marketlib::broker_event, const std::string &details) {})))
+        _client( std::shared_ptr <IBrokerClient>(new SerumMD(_logger,_settings, std::make_shared< PoolsRequester >( _logger, _settings ), [](const std::string &exchangeName, marketlib::broker_event, const std::string &details) {})) )
 {
     _logger->Debug((boost::format("Session | construct ")).str().c_str());
     _clientId = std::to_string((long)this);

@@ -12,22 +12,22 @@ using namespace marketlib;
 
 void SerumMD::onOpen() {
 #ifdef SERUM_DEBUG
-logger->Debug("> SerumMD::onOpen");
+_logger->Debug("> SerumMD::onOpen");
 #endif
-	onEvent(getName(), broker_event::session_logon, "Serum DEX Logon: " + getName());
+	_onEvent(getName(), broker_event::session_logon, "Serum DEX Logon: " + getName());
 }
 void SerumMD::onClose() {
 #ifdef SERUM_DEBUG
-	logger->Debug("> SerumMD::onClose");
+	_logger->Debug("> SerumMD::onClose");
 #endif
-	onEvent(getName(), broker_event::session_logout, "Serum DEX Logout: " + getName());
+	_onEvent(getName(), broker_event::session_logout, "Serum DEX Logout: " + getName());
 	clearMarkets();
 }
 void SerumMD::onFail() {
 #ifdef SERUM_DEBUG
-logger->Debug("> SerumMD::onFail");
+_logger->Debug("> SerumMD::onFail");
 #endif
-	onEvent(getName(), broker_event::session_logout, "Serum DEX Logout: " + getName());
+	_onEvent(getName(), broker_event::session_logout, "Serum DEX Logout: " + getName());
 	clearMarkets();
 }
 void SerumMD::onMessage(const string& message) {
@@ -45,14 +45,14 @@ void SerumMD::onEventHandler(const string &message) {
 
 	string type = parsed_data.at("type").as_string().c_str();
 	if (type == "subscribed" || type == "unsubscribed") {
-		logger->Info(message.c_str());
+		_logger->Info(message.c_str());
 		return;
 	} 
 
 	// logger->Info(message.c_str());
 	string market = parsed_data.at("market").as_string().c_str();
 	if (type == "quote") {
-			top_snapshot[market] = MarketBook{
+			_top_snapshot[market] = MarketBook{
 				system_clock::now(), 
 				stod(parsed_data.at("bestBid").at(0).as_string().c_str()),
 				stod(parsed_data.at("bestBid").at(1).as_string().c_str()),
@@ -60,7 +60,7 @@ void SerumMD::onEventHandler(const string &message) {
 				stod(parsed_data.at("bestAsk").at(1).as_string().c_str())
 			};
 		
-		auto chnls = channels
+		auto chnls = _channels
 			.get<SubscribeChannelsByMarketAndSubscribeModel>()
 			.equal_range(boost::make_tuple(
 				market, 
@@ -68,9 +68,9 @@ void SerumMD::onEventHandler(const string &message) {
 			));
 		while(chnls.first != chnls.second) {
 			chnls.first->callback(
-				name,
-				chnls.first->instr,
-				top_snapshot[market]
+				_name,
+				chnls.first->instr.symbol,
+				_top_snapshot[market]
 			);
 			++chnls.first;
   		}
@@ -84,15 +84,15 @@ void SerumMD::onEventHandler(const string &message) {
 			}
 		};
 		string key =  parsed_data.at("market").as_string().c_str();
-		depth_snapshot[key] = DepthSnapshot{};
-		auto& depth = depth_snapshot[key];
+		_depth_snapshot[key] = DepthSnapshot{};
+		auto& depth = _depth_snapshot[key];
 		depth.bids = std::list<BrokerModels::MarketUpdate>();
 		depth.asks = std::list<BrokerModels::MarketUpdate>();
 		jsonToObject(parsed_data.at("asks"), depth.asks);
 		jsonToObject(parsed_data.at("bids"), depth.bids);
 		// application->onReport(name, key, depth);
 
-		auto chnls = channels
+		auto chnls = _channels
 			.get<SubscribeChannelsByMarketAndSubscribeModel>()
 			.equal_range(boost::make_tuple(
 				market, 
@@ -100,8 +100,8 @@ void SerumMD::onEventHandler(const string &message) {
 			));
 		while(chnls.first != chnls.second){
 			chnls.first->callback(
-				name,
-				chnls.first->instr,
+				_name,
+				chnls.first->instr.symbol,
 				depth
 			);
 			++chnls.first;
@@ -135,11 +135,11 @@ void SerumMD::onEventHandler(const string &message) {
 				// 	[](const MarketUpdate&a, const MarketUpdate&b){ return a.price > b.price; });
 		};
 		string key =  parsed_data.at("market").as_string().c_str();
-		auto& depth = depth_snapshot[key];
+		auto& depth = _depth_snapshot[key];
 		updateDepth(parsed_data.at("asks"), depth.asks, true);
 		updateDepth(parsed_data.at("bids"), depth.bids, false);
 
-		auto chnls = channels
+		auto chnls = _channels
 			.get<SubscribeChannelsByMarketAndSubscribeModel>()
 			.equal_range(boost::make_tuple(
 				market, 
@@ -147,8 +147,8 @@ void SerumMD::onEventHandler(const string &message) {
 			));
 		while(chnls.first != chnls.second){
 			chnls.first->callback(
-				name,
-				chnls.first->instr,
+				_name,
+				chnls.first->instr.symbol,
 				depth
 			);
 			++chnls.first;
@@ -162,14 +162,14 @@ void SerumMD::onUpdateHandler(const string &message) {
 
 bool SerumMD::enabledCheck() const {
 	if (!isEnabled()) {
-		logger->Warn("Attempt to request disabled client");
+		_logger->Warn("Attempt to request disabled client");
 	}
 	return isEnabled();
 }
 
 bool SerumMD::connectedCheck() const {
 	if (!isConnected()) {
-		logger->Warn("Attempt to request disconnected client");
+		_logger->Warn("Attempt to request disconnected client");
 	}
 	return isConnected();
 }
@@ -178,39 +178,39 @@ bool SerumMD::activeCheck() const {
 	return enabledCheck() && connectedCheck();
 }
 
-SerumMD::SerumMD(logger_ptr _logger, settings_ptr _settings, pools_ptr _pools, callback_on_event _OnEvent):
-	logger(_logger), connection(this, _settings->get(ISettings::Property::WebsocketEndpoint), _logger), 
-	depth_snapshot(depth_snapshots()), settings(_settings), pools(_pools), onEvent(_OnEvent) {
+SerumMD::SerumMD(logger_ptr logger, settings_ptr settings, pools_ptr pools, callback_on_event OnEvent):
+	_logger(logger), _connection(this, settings->get(ISettings::Property::WebsocketEndpoint), logger), 
+	_depth_snapshot(depth_snapshots()), _settings(settings), _pools(pools), _onEvent(OnEvent) {
 		// pools->loadPools();
 	}
 
 bool SerumMD::isEnabled() const {
-	return connection.enabled;
+	return _connection.enabled;
 }
 
 bool SerumMD::isConnected() const {
-	return connection.connected;
+	return _connection.connected;
 }
 
 void SerumMD::clearMarkets() {
 #ifdef SERUM_DEBUG
-	logger->Debug("> SerumMD::clearMarkets");
+	_logger->Debug("> SerumMD::clearMarkets");
 #endif
-	depth_snapshot.clear();
-	top_snapshot.clear();
-	channels.clear();
+	_depth_snapshot.clear();
+	_top_snapshot.clear();
+	_channels.clear();
 }
 
 void SerumMD::start() {
-	connection.async_start();
+	_connection.async_start();
 }
 void SerumMD::stop() {
-	connection.async_stop();
+	_connection.async_stop();
 	clearMarkets();
 }
 
 void SerumMD::subscribe(const instrument& instr, SubscriptionModel model) {
-	connection.async_send((boost::format(R"({
+	_connection.async_send((boost::format(R"({
 		"op": "subscribe",
 		"channel": "%1%",
 		"markets": ["%2%"]
@@ -218,8 +218,8 @@ void SerumMD::subscribe(const instrument& instr, SubscriptionModel model) {
 	
 }
 
-void SerumMD::subscribe(const instrument& instr, SubscriptionModel model, const string& clientId, callback callback) {
-	auto chnls = channels
+void SerumMD::subscribe(const instrument& instr, SubscriptionModel model, const string& clientId, callback_subscribed_channel callback) {
+	auto chnls = _channels
 		.get<SubscribeChannelsByMarketAndSubscribeModel>()
 		.equal_range(boost::make_tuple(
 			getMarketFromInstrument(instr), 
@@ -230,14 +230,14 @@ void SerumMD::subscribe(const instrument& instr, SubscriptionModel model, const 
 		subscribe(instr, model);
 	} else {
 		callback(
-			name,
-			instr,
-			top_snapshot[getMarketFromInstrument(instr)]
+			_name,
+			instr.symbol,
+			_top_snapshot[getMarketFromInstrument(instr)]
 		);
 	}
 
 	
-	channels.insert(
+	_channels.insert(
 		SubscribeChannel{
 			clientId: clientId,
 			market: getMarketFromInstrument(instr),
@@ -310,7 +310,7 @@ void SerumMD::subscribe(const instrument& instr, SubscriptionModel model, const 
 // }
 
 void SerumMD::unsubscribe(const instrument& instr, SubscriptionModel model, const string& clientId) {
-	auto chnl = channels
+	auto chnl = _channels
 		.get<SubscribeChannelsByClientAndMarketAndSubscribeModel>()
 		.find(boost::make_tuple(
 			clientId,
@@ -318,35 +318,35 @@ void SerumMD::unsubscribe(const instrument& instr, SubscriptionModel model, cons
 			model
 		));
 
-	if (chnl == channels.end()) {
-		logger->Error("Subscription not found");
+	if (chnl == _channels.end()) {
+		_logger->Error("Subscription not found");
 		return;
 	}
 
-	channels.erase(chnl);
-	auto chnls = channels
+	_channels.erase(chnl);
+	auto chnls = _channels
 		.get<SubscribeChannelsByMarketAndSubscribeModel>()
 		.equal_range(boost::make_tuple(
 			getMarketFromInstrument(instr), 
 			model
 		));
 	if (chnls.first == chnls.second) {
-		connection.async_send((boost::format(R"({
+		_connection.async_send((boost::format(R"({
 			"op": "unsubscribe",
 			"channel": "%1%",
 			"markets": ["%2%"]
 		})") % subscriptionModelToString(model) % getMarketFromInstrument(instr)).str());
 
 		if (model == SubscriptionModel::top) {
-			top_snapshot.erase(getMarketFromInstrument(instr));
+			_top_snapshot.erase(getMarketFromInstrument(instr));
 		} else {
-			depth_snapshot.erase(getMarketFromInstrument(instr));
+			_depth_snapshot.erase(getMarketFromInstrument(instr));
 		}
 	}
 }
 
 void SerumMD::unsubscribeForClientId(const string& clientId) {
-	auto chnls = channels
+	auto chnls = _channels
 		.get<SubscribeChannelsByClient>()
 		.equal_range(boost::make_tuple(
 			clientId
@@ -364,15 +364,15 @@ static size_t writeCallback(void* content, size_t size, size_t count, void* resu
 }
 
 std::list< SerumMD::instrument > SerumMD::getInstruments() {
-    return pools->getPools();
+    return _pools->getPools();
 }
 
 
 string SerumMD::getName() const {
-	return settings->get(ISettings::Property::ExchangeName);
+	return _settings->get(ISettings::Property::ExchangeName);
 }
 
 SerumMD::~SerumMD() {
-	connection.async_stop();
+	_connection.async_stop();
 	while (isConnected()) continue;
 }

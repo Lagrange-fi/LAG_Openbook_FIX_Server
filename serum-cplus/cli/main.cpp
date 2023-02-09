@@ -36,8 +36,8 @@ int main(int argc, char **argv) {
     std::string conf_file = "fix_server.xml";
     std::unique_ptr<FIX8::ServerSessionBase> ms_md(
             new FIX8::ServerSession<SERUM_Data_session>(FIX8::SERUM_Data::ctx(), conf_file, "SERUM_MD"));
-    std::unique_ptr<FIX8::ServerSessionBase> ms_ord_sand(
-            new FIX8::ServerSession<SERUM_Order_sandbox_session>(FIX8::SERUM_Data::ctx(), conf_file, "SERUM_ORD_SAND"));
+    // std::unique_ptr<FIX8::ServerSessionBase> ms_ord_sand(
+    //         new FIX8::ServerSession<SERUM_Order_sandbox_session>(FIX8::SERUM_Data::ctx(), conf_file, "SERUM_ORD_SAND"));
 
     typedef std::shared_ptr<FIX8::SessionInstanceBase> ClientSession;
     std::vector<ClientSession> sessions;
@@ -68,17 +68,17 @@ int main(int argc, char **argv) {
             //const FIX8::ProcessModel pm(ms->get_process_model(ms->_ses));
             inst->start(false);
         }
-        if(order_part)
-        if (ms_ord_sand->poll())
-        {
-            std::shared_ptr<FIX8::SessionInstanceBase> inst(ms_ord_sand->create_server_instance());
-            sessions.push_back(inst);
-            printf("OSession added, count= %d\n", (int)sessions.size());
-            //inst->session_ptr()->control() |= FIX8::Session::print;
-            //FIX8::GlobalLogger::log("global_logger");
-            //const FIX8::ProcessModel pm(ms->get_process_model(ms->_ses));
-            inst->start(false);
-        }
+        // if(order_part)
+        // if (ms_ord_sand->poll())
+        // {
+        //     std::shared_ptr<FIX8::SessionInstanceBase> inst(ms_ord_sand->create_server_instance());
+        //     sessions.push_back(inst);
+        //     printf("OSession added, count= %d\n", (int)sessions.size());
+        //     //inst->session_ptr()->control() |= FIX8::Session::print;
+        //     //FIX8::GlobalLogger::log("global_logger");
+        //     //const FIX8::ProcessModel pm(ms->get_process_model(ms->_ses));
+        //     inst->start(false);
+        // }
     }
 
     std::for_each(sessions.begin(),sessions.end(),[](ClientSession& sess)

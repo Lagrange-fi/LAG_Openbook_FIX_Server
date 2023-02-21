@@ -6,6 +6,8 @@ find_package(OpenSSL REQUIRED)
 find_package(CURL REQUIRED) 
 # find_package(GMP REQUIRED) 
 
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
+
 set(DEX_INCLUDES 
         ".."
         ${CMAKE_SOURCE_DIR}/sharedlib
@@ -58,4 +60,22 @@ target_link_libraries("SerumMarketTest" PRIVATE
     ${CMAKE_SOURCE_DIR}/build/instruments/libinstruments.a
     /usr/local/lib/libgmp.a
     /usr/local/lib/libcryptopp.a
+    /usr/local/lib/
    )
+
+#    add_executable("Test"Test.cpp)
+#    target_include_directories("Test" PRIVATE
+#            ${DEX_INCLUDES}
+#            ${CMAKE_SOURCE_DIR}/SerumDEX
+#            )
+#    target_link_libraries("Test" PRIVATE
+#         ${DEX_LIBRARIES}
+#         ${CMAKE_SOURCE_DIR}/build/SerumDEX/libfixserverSerumDEX.a
+#         ${CMAKE_SOURCE_DIR}/build/base64/libbase64.a
+#         ${CMAKE_SOURCE_DIR}/build/base58/libbase58.a
+#         ${CMAKE_SOURCE_DIR}/build/sol_sdk/libsol_sdk.a
+#         ${CMAKE_SOURCE_DIR}/build/instruments/libinstruments.a
+#         /usr/local/lib/libgmp.a
+#         /usr/local/lib/libcryptopp.a
+#        )
+   

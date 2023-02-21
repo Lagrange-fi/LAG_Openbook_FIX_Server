@@ -103,24 +103,29 @@ int main () {
             ]
              */
             for(auto instr : instruments) {
-                cout << "Exch: "
-                << instr.engine
+                cout 
+                // "Exch: "
+                // << instr.engine
                 << "  Market: "
                 << instr.symbol
-                <<"  Currency: "
+                << " base_curency: "
+                << instr.base_currency
+                << " quote_curency: "
                 << instr.quote_currency
-                << "  sec_id: "
-                << instr.sec_id
-                << "  precision: "
-                << instr.tick_precision
+                // <<"  Currency: "
+                // << instr.quote_currency
+                // << "  sec_id: "
+                // << instr.sec_id
+                // << "  precision: "
+                // << instr.tick_precision
                 << " address "
                 << instr.address
-                << " base_min_addr "
-                << instr.base_mint_address
-                << " quote_mint_addr "
-                << instr.quote_mint_address
-                << "min_order_size "
-                << instr.min_order_size
+                // << " base_min_addr "
+                // << instr.base_mint_address
+                // << " quote_mint_addr "
+                // << instr.quote_mint_address
+                // << "min_order_size "
+                // << instr.min_order_size
                 << endl;
 
             }

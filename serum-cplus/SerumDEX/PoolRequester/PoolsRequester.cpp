@@ -6,10 +6,10 @@ using namespace std;
 #define AS_STR(x) x.as_string().c_str()
 
 PoolsRequester::PoolsRequester(logger_ptr logger, settings_ptr settings, std::string path):
-	_logger(logger), _settings(settings), _pools(), _path(path)
+	_logger(logger), _settings(settings), _pools(), _path(path), _pools_list()
 {
-	loadPoolList(); 
 	loadPoolsFromJson();
+	loadPoolList();
 }
 
 void PoolsRequester::loadPoolList()
@@ -29,7 +29,7 @@ void PoolsRequester::loadPoolList()
 			result = curl_easy_perform(curl);
 			// Error check
 			if (result != CURLE_OK) {
-				_logger->Error("curl_easy_perform() error");
+				_logger->Error("curl_easy_perform() error: ");
 				response.clear();
 				throw ;
 			}
@@ -41,15 +41,20 @@ void PoolsRequester::loadPoolList()
 		}
 	}
 	catch(int e) {
-		_pools_list = std::list< Pool >();
+		// _pools_list = std::list< Pool >();
 	}
 
-	_pools_list = std::list< Pool >();
+	// _pools_list = std::list< Pool >();
 	auto parsed_data = boost::json::parse(response);
 	for( auto pool : parsed_data.as_array()) {
+
+		string symbol = AS_STR(pool.at("name"));
 		_pools_list.push_back(
-			PoolsRequester::Pool{
-				name:	AS_STR(pool.at("name")), 
+			Instrument{
+				engine: "OpenBook",
+				symbol:	symbol, 
+				base_currency: symbol.substr(0, symbol.find("/")),
+				quote_currency: symbol.substr(symbol.find("/") + 1),
 				address: AS_STR(pool.at("address")), 
 				program_id: AS_STR(pool.at("programId")),
 				deprecated: pool.at("deprecated").as_bool()
@@ -58,7 +63,7 @@ void PoolsRequester::loadPoolList()
     }
 }
 
-PoolsRequester::Instrument PoolsRequester::getPoolInfoFromServer(const Pool& pool_info)
+PoolsRequester::Instrument PoolsRequester::getPoolInfoFromServer(const Instrument& pool_info)
 {
 	CURL *curl;
 	CURLcode result;
@@ -88,14 +93,14 @@ PoolsRequester::Instrument PoolsRequester::getPoolInfoFromServer(const Pool& poo
 		}
 	}
 	catch(int e) {
-		_pools_list = std::list< Pool >();
+		// _pools_list = std::list< Pool >();
 	}
 
 	auto parsed_data = boost::json::parse(response);
 	return Instrument{
 		engine:	_settings->get(ISettings::Property::ExchangeName), 
 		sec_id: "", 
-		symbol: pool_info.name, 
+		symbol: pool_info.symbol, 
 		base_currency: 	AS_STR(parsed_data.at("baseSymbol")),
 		quote_currency:	AS_STR(parsed_data.at("quoteSymbol")),
 		address: 	pool_info.address,
@@ -121,8 +126,8 @@ const PoolsRequester::Instrument& PoolsRequester::getPool(const Instrument& inst
 	}
 	auto name = instrument.base_currency + "/" + instrument.quote_currency;
 
-	auto p = std::find_if(_pools_list.begin(), _pools_list.end(), [&name] (const Pool& p) {
-		return p.name == name;
+	auto p = std::find_if(_pools_list.begin(), _pools_list.end(), [&name] (const Instrument& p) {
+		return p.symbol == name;
 	});
 
 	if (p == std::end(_pools_list))
@@ -150,10 +155,5 @@ void PoolsRequester::savePoolsToJson()
 
 std::list<PoolsRequester::Instrument> PoolsRequester::getPools() 
 {
-	std::list<PoolsRequester::Instrument> newpools;
-	
-	for( const auto& p: _pools.InstrumentsList() ) {
-		newpools.push_back(p.GetInstrument());
-	}
-	return newpools;
+	return _pools_list;
 }

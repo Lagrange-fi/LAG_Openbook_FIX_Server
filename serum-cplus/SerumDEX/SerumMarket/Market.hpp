@@ -39,15 +39,14 @@ class SerumMarket : IMarket
 private:
     typedef std::string string;
     typedef std::shared_ptr < IPoolsRequester > pools_ptr;
-    typedef std::shared_ptr < IListener > Listener;
+    typedef std::shared_ptr < IListener > listener_ptr;
     // typedef std::shared_ptr < MintAdresses > MintAddresses_ptr;
     typedef marketlib::order_t Order;
     typedef Keypair SecretKey;
-    typedef std::shared_ptr < Order > Order_ptr;
     typedef marketlib::execution_report_t ExecutionReport;
     typedef marketlib::instrument_descr_t Instrument;
     typedef std::function <void(const string&, const Instrument&, const string&)> Callback;
-    typedef std::function <void(const string&, Order_ptr)> OrdersCallback;
+    typedef std::function <void(const string&, const ExecutionReport&)> OrdersCallback;
     typedef solana::PublicKey PublicKey;
 
     struct MarketLayout
@@ -91,7 +90,7 @@ private:
     >;
 
     using Orders = boost::multi_index::multi_index_container<
-        Order_ptr ,
+        Order ,
         boost::multi_index::indexed_by<
             boost::multi_index::hashed_unique<
                 boost::multi_index::tag<struct OrderByCliId>,
@@ -103,37 +102,13 @@ private:
     struct change_order_status
     {
         change_order_status(const marketlib::order_state_t& new_state):new_state_(new_state){}
-        void operator()(Order_ptr o)
+        void operator()(Order& o)
         {
-            o->state=new_state_;
+            o.state=new_state_;
         }
 
     private:
         marketlib::order_state_t new_state_;
-    };
-
-    struct change_order_remaining_qty
-    {
-        change_order_remaining_qty(double new_qty):new_qty_(new_qty){}
-        void operator()(Order_ptr o)
-        {
-            o->remaining_qty=new_qty_;
-        }
-
-    private:
-        double new_qty_;
-    };
-
-    struct change_order_exId
-    {
-        change_order_exId(unsigned __int128 new_exId): new_exId_(new_exId){}
-        void operator()(Order_ptr o)
-        {
-            o->exchId=new_exId_;
-        }
-
-    private:
-        unsigned __int128 new_exId_;
     };
 
     PublicKey _pubkey;
@@ -143,7 +118,7 @@ private:
     Orders _open_orders;
     Callback _callback;
     OrdersCallback _orders_callback;
-    Listener _trade_channel;
+    listener_ptr _trade_channel;
     MarketChannels _markets_info;
     std::map<std::string, uint64_t> _order_count_for_symbol;
     // MintAddresses_ptr _mint_addresses;
@@ -151,7 +126,7 @@ private:
     std::map<string, uint64_t> _subscribed_channels;
     // std::map<string, string> _mint_addresses;
     uint64_t _message_count;
-    const string _name = "SerumMarket";
+    const string _name;
     
     string place_order(
         const MarketChannel&,
@@ -194,12 +169,18 @@ private:
     time_t current_time() const { return std::time(nullptr);};
 
     // void order_checker(const string&, const string&, const ExecutionReport&);
-    void check_order(const string&, const string&, const Instrument&);
-    void uncheck_order(const string&, const string&, const Instrument&);
+    void check_order(const Instrument&);
+    void uncheck_order(const Instrument&);
+
+    std::string getMarketFromInstrument(const Instrument& instr) {
+		if (instr.base_currency.size() && instr.quote_currency.size())
+			return instr.base_currency + "/" + instr.quote_currency;
+		return instr.symbol;
+	}
 public:
-    SerumMarket(const string&, const string&, const string&, pools_ptr, Callback, OrdersCallback);
+    SerumMarket(const string&, const string&, const string&, pools_ptr, listener_ptr, Callback, OrdersCallback, const string& );
     // SerumMarket(const string&, pools_ptr, Callback, OrdersCallback);
-    SerumMarket(const SerumMarket&);
+    // SerumMarket(const SerumMarket&);
 
     Order send_new_order(const Instrument&, const Order&) override;
     Order cancel_order(const Instrument&, const Order&) override;

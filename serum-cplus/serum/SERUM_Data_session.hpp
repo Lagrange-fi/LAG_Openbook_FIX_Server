@@ -28,6 +28,7 @@ public:
                       FIX8::Logger *plogger=nullptr);
     virtual ~SERUM_Data_session();
 
+    void setupDataSubscriber(const std::shared_ptr < IBrokerClient >& client){_client=client;}
 private:
     // FIX8::Session implementation
     bool handle_application(const unsigned seqnum, const FIX8::Message *&msg) override;
@@ -61,7 +62,6 @@ private:
     //     must                return true       return true
 private:
     std::shared_ptr < ILogger > _logger;
-    std::shared_ptr < ISettings > _settings;
     std::string _clientId;
 public:
     std::shared_ptr < IBrokerClient > _client;

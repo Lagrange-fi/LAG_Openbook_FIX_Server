@@ -36,13 +36,13 @@ void Logger::Info(const char *content, ...) {
 	cout << "INFO | " << content << "\n";
 }
 void Logger::Debug(const char *content, ...) {
-	cout << "INFO | " << content << "\n";
+	cout << "DEBUG | " << content << "\n";
 }
 void Logger::Error(const char *content, ...) {
-	cout << "INFO | " << content << "\n";
+	cout << "ERROR | " << content << "\n";
 }
 void Logger::Warn(const char *content, ...) {
-	cout << "INFO | " << content << "\n";
+	cout << "WARN | " << content << "\n";
 }
 
 void Logger::Critical(const char *content, ...) {
@@ -91,7 +91,7 @@ string formatExecutionReport(const string& exchangeName, const string &symbol, c
     }
 
 
-    return (boost::format("Symbol(%1%)\nType(%2%)\nSide(%3%)\nPrice(%4%)\nAmountExecuted(%5%)\nAmountRemaining(%6%)\nStatus(%7%)\nExchId(%8%)\n\n") 
+    return (boost::format("Symbol(%1%)\nType(%2%)\nSide(%3%)\nPrice(%4%)\nAmountExecuted(%5%)\nAmountRemaining(%6%)\nStatus(%7%)\nExchId(%8%)\nCliId(%9%)\n\n") 
         % symbol
         % (report.orderType == order_type_t::ot_Limit ? "limit" : "market")
         % (report.side == order_side_t::os_Buy ? "buy" : "sell")
@@ -99,7 +99,8 @@ string formatExecutionReport(const string& exchangeName, const string &symbol, c
         % report.cumQty
         % report.leavesQty
         % state
-        % uint128toa(report.exchId)
+        % report.exchId
+        % report.clId
     ).str().c_str();
 }
 

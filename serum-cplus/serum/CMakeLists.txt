@@ -8,7 +8,9 @@ add_library("${SERUM_NAME}" STATIC
         FIX8_SERUM_Order_traits.cpp
         FIX8_SERUM_Order_types.cpp
         SERUM_Data_session.cpp
-        # SERUM_Order_sandbox_session.cpp
+        SERUM_Order_sandbox_session.cpp
+        SERUM_Order_session.cpp
+        ConsoleLogger.cpp
         )
 
 find_package(Fix8 REQUIRED)

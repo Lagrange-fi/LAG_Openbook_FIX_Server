@@ -3,17 +3,17 @@ using namespace solana;
 
 SerumMarket::SerumMarket(
     const string& pubkey, const string& secretkey, const string& http_address, 
-    pools_ptr pools, Callback callback, OrdersCallback orders_callback) : 
+    pools_ptr pools, listener_ptr listener, Callback callback, OrdersCallback orders_callback, const string& market_id): 
 _pubkey(pubkey), _secretkey(secretkey), _http_address(http_address), 
-_pools(pools), _callback(callback), _message_count(0), _orders_callback(orders_callback),
-_order_count_for_symbol()
+_pools(pools), _trade_channel(listener),_callback(callback), _message_count(0), _orders_callback(orders_callback),
+_order_count_for_symbol(), _name(market_id)
 {}
 
-SerumMarket::SerumMarket(const SerumMarket& other): 
-_pubkey(other._pubkey), _secretkey(other._secretkey), _http_address(other._http_address), 
-_pools(other._pools), _callback(other._callback), _message_count(0), _orders_callback(other._orders_callback),
-_order_count_for_symbol()
-{}
+// SerumMarket::SerumMarket(const SerumMarket& other): 
+// _pubkey(other._pubkey), _secretkey(other._secretkey), _http_address(other._http_address), 
+// _pools(other._pools), _callback(other._callback), _message_count(0), _orders_callback(other._orders_callback),
+// _order_count_for_symbol(), _name(other._name)
+// {}
 
 SerumMarket::~SerumMarket()
 {
@@ -31,7 +31,7 @@ SerumMarket::Order SerumMarket::send_new_order(const Instrument& instrument_, co
     signers.push_back(_secretkey);
     try {
         market_info = get_market_info(instrument_, _pubkey);
-        orders_account_info = get_orders_account_info(instrument_, _pubkey);
+        orders_account_info = get_orders_account_info(market_info.instr, _pubkey);
 
         if (order_.side == marketlib::order_side_t::os_Buy && market_info.payer_buy.get_str_key().empty()) {
             auto payer_buy = get_token_account_by_owner(_pubkey.get_str_key(), market_info.instr.quote_mint_address);
@@ -61,11 +61,11 @@ SerumMarket::Order SerumMarket::send_new_order(const Instrument& instrument_, co
         return order_;
     }
 
-    auto order = std::make_shared<Order>(order_);
-    if (order->clId == 0) {
+    auto order = order_;
+    if (strtoul(order.clId.c_str(), nullptr, 0) == 0) {
         std::random_device rd; 
         std::mt19937_64 mersenne(rd());
-        order->clId = mersenne();
+        order.clId = std::to_string(mersenne());
     };
     // auto payer = order.side == marketlib::order_side_t::os_Buy ? market_info->payer_buy : market_info->payer_sell;
 
@@ -74,16 +74,16 @@ SerumMarket::Order SerumMarket::send_new_order(const Instrument& instrument_, co
             market_info,
             orders_account_info,
             OrderType::LIMIT,
-            order->side == marketlib::order_side_t::os_Buy ? Side::BUY : Side::SELL,
-            order->price,
-            order->original_qty,
-            order->clId,
+            order.side == marketlib::order_side_t::os_Buy ? Side::BUY : Side::SELL,
+            order.price,
+            order.original_qty,
+            strtoul(order.clId.c_str(), nullptr, 0),
             txn,
             signers,
             _pubkey
         );
         _callback(_name, instrument_, "The order is sent: " + res);
-        order->transaction_hash = res;
+        order.transaction_hash = res;
     }
 
     catch (string e) {
@@ -91,12 +91,12 @@ SerumMarket::Order SerumMarket::send_new_order(const Instrument& instrument_, co
         return order_;
     }
 
-    order->state = marketlib::order_state_t::ost_Undefined;
-    order->init_time = current_time();
+    order.state = marketlib::order_state_t::ost_Undefined;
+    order.init_time = current_time();
     _open_orders.insert(order);
 
-    check_order(market_info.base, market_info.quote, instrument_);
-    return **(_open_orders.begin());
+    check_order(instrument_);
+    return *(_open_orders.begin());
 }
 
 SerumMarket::Order SerumMarket::cancel_order(const Instrument& instrument_, const Order& order_)
@@ -105,7 +105,7 @@ SerumMarket::Order SerumMarket::cancel_order(const Instrument& instrument_, cons
     OpenOrdersAccountInfo orders_account_info;
     try {
         market_info = get_market_info(instrument_, _pubkey);
-        orders_account_info = get_orders_account_info(instrument_, _pubkey);        
+        orders_account_info = get_orders_account_info(market_info.instr, _pubkey);        
     }
     catch (string e) {
         _callback(_name, instrument_, "Failed to get information: " + e);
@@ -122,7 +122,7 @@ SerumMarket::Order SerumMarket::cancel_order(const Instrument& instrument_, cons
                 event_queue: market_info.parsed_market.event_queue,
                 open_orders: orders_account_info.account,
                 owner: _pubkey,
-                client_id: order_.clId,
+                client_id: strtoul(order_.clId.c_str(), nullptr, 0),
                 program_id: MARKET_KEY
             }
         )
@@ -248,13 +248,7 @@ const SerumMarket::MarketChannel& SerumMarket::get_market_info(const Instrument&
 		));
 
     if (market_info == _markets_info.end()) {
-        // auto pls = pools_->getPools();
         auto pool = _pools->getPool(instrument_);
-        // auto pool = *std::find_if(pls.begin(), pls.end(), [&instrument](const Instrument& i){ 
-        //         return instrument.base_currency == i.base_currency && 
-        //             instrument.quote_currency == i.quote_currency;
-        //     });
-
         _markets_info.insert(create_market_info(pool, pubkey_));
         market_info = _markets_info.begin();
     }
@@ -702,59 +696,61 @@ std::string SerumMarket::send_transaction(Transaction &txn_, const Transaction::
 //         return;
 
 //     _open_orders.modify(order, change_order_status(exec_report_.state));
-//     _open_orders.modify(order, change_order_remaining_qty(exec_report_.leavesQty));
-//     _open_orders.modify(order, change_order_exId(exec_report_.exchId));
-//     _orders_callback(_name, *order);
+//     _orders_callback(_name, exec_report_);
 
-//     if ((*order)->isCompleted()) {
+//     if (order->isCompleted()) {
 //         _open_orders.erase(order);
-//         return;
+//         uncheck_order(Instrument{});
 //     }
-// };
+// }
 
-void SerumMarket::check_order(const string& base_, const string& quote_, const Instrument& instrument_) 
+void SerumMarket::check_order(const Instrument& instrument_) 
 {
-    auto symbol = base_ + quote_;
+    auto symbol = getMarketFromInstrument(instrument_);
     if (_order_count_for_symbol.find(symbol) != _order_count_for_symbol.end()) {
         ++_order_count_for_symbol[symbol];
         return;
     }
 
-    auto order_cheker = [this](const string& exch_name_, const string& cli_id_, const ExecutionReport& exec_report_)  
-    {
-        auto order = _open_orders.get<OrderByCliId>()
-        .find(exec_report_.clId);
+    auto checker = [this, instrument_]
+        (const string& exch_name_, const string& cli_id_, const ExecutionReport& exec_report_)  
+        {
+            auto order = _open_orders.get<OrderByCliId>()
+            .find(exec_report_.clId);
 
-        if (order == _open_orders.end()) 
-            return;
+            if (order == _open_orders.end()) 
+                return;
 
-        _open_orders.modify(order, change_order_status(exec_report_.state));
-        _open_orders.modify(order, change_order_remaining_qty(exec_report_.leavesQty));
-        _open_orders.modify(order, change_order_exId(exec_report_.exchId));
-        _orders_callback(_name, *order);
+            _open_orders.modify(order, change_order_status(exec_report_.state));
+            _orders_callback(_name, exec_report_);
 
-        if ((*order)->isCompleted()) {
-            _open_orders.erase(order);
-        }
-    };
+            if (order->isCompleted()) {
+                _open_orders.erase(order);
+                // uncheck_order(instrument_);
+            }
+        };
 
     _trade_channel->listen(
         instrument_, 
         _name + symbol, 
-        order_cheker
+       checker
     );
     _order_count_for_symbol[symbol] = 1;
 }
 
-void SerumMarket::uncheck_order(const string& base_, const string& quote_, const Instrument& instrument_)
+void SerumMarket::uncheck_order(const Instrument& instrument_)
 {
-    auto symbol = base_ + quote_;
+    auto symbol = getMarketFromInstrument(instrument_);
     if (_order_count_for_symbol.find(symbol) == _order_count_for_symbol.end()) {
         return; 
     }
     
     --_order_count_for_symbol[symbol];
     if (_order_count_for_symbol[symbol] < 1) {
+        _trade_channel->unlisten(
+            instrument_, 
+            _name + symbol
+        );
         _order_count_for_symbol.erase(symbol);
     }
 }

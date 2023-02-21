@@ -11,12 +11,12 @@
 class PoolsRequester : public IPoolsRequester
 {
 private:
-    struct Pool {
-        std::string name;
-        std::string address;
-        std::string program_id;
-        bool deprecated;
-    };
+    // struct Pool {
+    //     std::string name;
+    //     std::string address;
+    //     std::string program_id;
+    //     bool deprecated;
+    // };
     typedef marketlib::instrument_descr_t Instrument;
     typedef std::shared_ptr < ILogger > logger_ptr;
     typedef std::shared_ptr < ISettings > settings_ptr;
@@ -35,10 +35,10 @@ private:
     InstrumentsJson _pools;
     std::string _path;
     // std::vector< Instrument > pools;
-    std::list< Pool > _pools_list;
+    std::list< Instrument > _pools_list;
 
     void loadPoolList();
     void savePoolsToJson();
     void loadPoolsFromJson();
-    Instrument getPoolInfoFromServer(const Pool&);
+    Instrument getPoolInfoFromServer(const Instrument&);
 };

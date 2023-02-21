@@ -4,9 +4,11 @@
 
 #include <SerumDEX/SerumMarket/Market.hpp>
 #include <SerumDEX/SerumMarket/models.hpp>
+#include <SerumDEX/SerumTrade.h>
 #include <SerumDEX/PoolRequester/PoolsRequester.h>
 #include <marketlib/include/BrokerModels.h>
 #include <marketlib/include/enums.h>
+#include <sharedlib/include/IListener.h>
 #include "Appendix.hpp"
 #include "settings.h"
 
@@ -15,15 +17,7 @@ using namespace BrokerModels;
 using namespace marketlib;
 typedef marketlib::order_t Order;
 typedef instrument_descr_t Instrument;
-// typedef order_t Order;
 
-// std::map<string, string> stat = {
-//     "0": "NewOrder",
-//     "1": "PartiallyFilled",
-//     "2": "Filled",
-//     "4": "Cancelled",
-//     "8": "Rejected"
-// }
 
 std::string str_state(marketlib::order_state_t state){
     switch (state) {
@@ -42,7 +36,8 @@ int main ()
     shared_ptr < ILogger > logger(new Logger);
     shared_ptr < ISettings > settings(new SerumSettings);
     shared_ptr < IPoolsRequester > pools(new PoolsRequester(logger, settings, "./market.json"));
-
+    shared_ptr < IListener >  trade_channel (new SerumTrade ( logger, settings, [&logger](const string& exch, broker_event event, const string& info) {logger->Trace(info.c_str());}));
+    trade_channel->start();
     auto instr = Instrument{
         engine: "",
         sec_id: "",
@@ -51,23 +46,20 @@ int main ()
         quote_currency: "USDC"
     };
 
-    // const auto p = pools->getPool(instr);
-    // cout << p.address << endl;
-    // cout << p.quote_mint_address << endl;
-    // cout << p.base_mint_address << endl;
-    // auto tt = 0;
     auto market = SerumMarket(
         PUBKEY, 
         SECRETKEY, 
-        "https://solana-api.projectserum.com", 
-        pools, 
+        "https://nd-664-169-151.p2pify.com/a89ccd991de179587a0b8e3356409a9b", 
+        pools,
+        trade_channel,
         [](const string& name, const Instrument& inst, const string& info){
             std::cout << name << " || " << inst.symbol << " || " + info;},
-        [](const string& name, shared_ptr<Order> order) {
+        [](const string& name, const execution_report_t& execution_report) {
             std::cout << "Order Update" << std::endl;
-            std::cout << "id:" << order->clId << std::endl;
-            std::cout << "status" << str_state(order->state) << endl;  
-        }
+            std::cout << "id:" << execution_report.clId << std::endl;
+            std::cout << "status" << str_state(execution_report.state) << endl;  
+        },
+        "Market_1"
     );
 
     // cout << sizeof(Instruction) << endl;
@@ -76,13 +68,14 @@ int main ()
     order_sell.price = 39;
     order_sell.original_qty = 0.1;
     order_sell.side = order_side_t::os_Sell;
-    order_sell.clId = 1234567;
+    order_sell.clId = "1342";
+    // order_sell.exchId = "719423018874672537328158";
 
     order_t order_buy;
     order_buy.price = 15;
     order_buy.original_qty = 0.1;
     order_buy.side = order_side_t::os_Buy;
-    order_buy.clId = 7654321;
+    order_buy.clId = "7654321";
 
     while (1)
     {

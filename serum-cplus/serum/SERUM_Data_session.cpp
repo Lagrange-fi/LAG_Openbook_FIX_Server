@@ -2,87 +2,11 @@
 #include <ctime>
 #include "SERUM_Data_session.hpp"
 
-#include <sharedlib/include/Logger.h>
-
 #include <SerumDEX/SerumMD.h>
 #include <SerumDEX/PoolRequester/PoolsRequester.h>
+#include "ConsoleLogger.h"
 
 const char* CONN_NAME="Serum";
-
- class TestLogger: public ILogger
- {
- private:
-
-     typedef std::string string;
-
- public:
-
-     void Info(const char *content, ...) override;
-     void Debug(const char *content, ...) override;
-     void Error(const char *content, ...) override;
-     void Critical(const char *content, ...) override;
-     void Warn(const char *content, ...) override;
-     void Trace(const char *content, ...) override;
-
-     ~TestLogger() = default;
- };
-
-void TestLogger::Info(const char *content, ...) {
-    time_t curr_time;
-    curr_time = time(NULL);
-    tm *tm_local = localtime(&curr_time);
-    std::cout  << tm_local->tm_hour << ":" << tm_local->tm_min << ":" << tm_local->tm_sec << " | INFO | " << content << "\n";
-}
-void TestLogger::Debug(const char *content, ...) {
-    time_t curr_time;
-    curr_time = time(NULL);
-    tm *tm_local = localtime(&curr_time);
-    std::cout  << tm_local->tm_hour << ":" << tm_local->tm_min << ":" << tm_local->tm_sec  << " | DEBUG | " << content << "\n";
-}
-void TestLogger::Error(const char *content, ...) {
-    time_t curr_time;
-    curr_time = time(NULL);
-    tm *tm_local = localtime(&curr_time);
-    std::cout  << tm_local->tm_hour << ":" << tm_local->tm_min << ":" << tm_local->tm_sec  << " | ERROR | " << content << "\n";
-}
-void TestLogger::Warn(const char *content, ...) {
-    time_t curr_time;
-    curr_time = time(NULL);
-    tm *tm_local = localtime(&curr_time);
-    std::cout  << tm_local->tm_hour << ":" << tm_local->tm_min << ":" << tm_local->tm_sec << " | WARN | " << content << "\n";
-}
-void TestLogger::Critical(const char *content, ...) {
-    time_t curr_time;
-    curr_time = time(NULL);
-    tm *tm_local = localtime(&curr_time);
-    std::cout  << tm_local->tm_hour << ":" << tm_local->tm_min << ":" << tm_local->tm_sec << " | CRIT | " << content << "\n";
-}
-void TestLogger::Trace(const char *content, ...) {
-    time_t curr_time;
-    curr_time = time(NULL);
-    tm *tm_local = localtime(&curr_time);
-    std::cout  << tm_local->tm_hour << ":" << tm_local->tm_min << ":" << tm_local->tm_sec << " | TRACE | " << content << "\n";
-}
-
-class SerumSettings : public ISettings {
-
-private:
-
-    typedef std::string string;
-
-public:
-
-    string get(Property property) const override {
-        switch (property) {
-            case Property::ExchangeName:
-                return "Serum";
-            case Property::WebsocketEndpoint:
-                return "wss://api.serum-vial.dev/v1/ws";
-            default:
-                return "";
-        }
-    }
-};
 
 SERUM_Data_session::SERUM_Data_session(const FIX8::F8MetaCntx& ctx,
                                        const FIX8::sender_comp_id& sci,
@@ -91,9 +15,9 @@ SERUM_Data_session::SERUM_Data_session(const FIX8::F8MetaCntx& ctx,
                                      FIX8::Logger *plogger):
         Session(ctx, sci, persist, slogger, plogger),
         FIX8::SERUM_Data::FIX8_SERUM_Data_Router(),
-        _logger(new TestLogger),
-        _settings(new SerumSettings),
-        _client( std::shared_ptr <IBrokerClient>(new SerumMD(_logger,_settings, std::make_shared< PoolsRequester >( _logger, _settings ), [](const std::string &exchangeName, marketlib::broker_event, const std::string &details) {})) )
+        _logger(new ConsoleLogger),
+        _client(nullptr)
+        //_client( std::shared_ptr <IBrokerClient>(new SerumMD(_logger,_settings, std::make_shared< PoolsRequester >( _logger, _settings ), [](const std::string &exchangeName, marketlib::broker_event, const std::string &details) {})) )
 {
     _logger->Debug((boost::format("Session | construct ")).str().c_str());
     _clientId = std::to_string((long)this);
@@ -140,14 +64,14 @@ FIX8::Message *SERUM_Data_session::generate_logon(const unsigned heartbeat_inter
 bool SERUM_Data_session::handle_logon(const unsigned seqnum, const FIX8::Message *msg)
 {
     _logger->Debug((boost::format("Session | handle_logon ")).str().c_str());
-   try {
+   /* try {
        _logger->Info((boost::format("Session | Serum DEX start ")).str().c_str());
        _client->start();
    }
    catch(std::exception& ex)
    {
        _logger->Error((boost::format("Session | Serum DEX start exception(%1%)")% ex.what()).str().c_str());
-   }
+   }*/
    return FIX8::Session::handle_logon(seqnum, msg);
 }
 
@@ -156,11 +80,13 @@ bool SERUM_Data_session::handle_logout(const unsigned seqnum, const FIX8::Messag
     _logger->Debug((boost::format("Session | handle_logout ")).str().c_str());
     try {
         _logger->Info((boost::format("Session | Serum DEX stop ")).str().c_str());
-        _client->stop();
-         while(_client->isConnected())
-            std::this_thread::sleep_for(std::chrono::milliseconds(200));
-        this->stop();
+        // _client->stop();
+        //  while(_client->isConnected())
+        //  std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        _client->unsubscribeForClientId(_clientId);
+
         // _control |= shutdown;
+        this->stop();
     }
     catch(std::exception& ex)
     {
@@ -298,11 +224,11 @@ bool SERUM_Data_session::operator() (const class FIX8::SERUM_Data::MarketDataReq
     marketlib::instrument_descr_t pool {.engine=CONN_NAME,.sec_id=symbol.get(),.symbol=symbol.get()};
     if(subscr_type==marketlib::subscription_type::shapshot_update)
     {
-        _logger->Info((boost::format("Session | MD subscribe to %1% : %2%, depth(%3%), update type(%4%)")
-                    % request.engine % request.symbol % request.depth % request.update_type).str().c_str());
         try{
             //_client->subscribe(pool, depth, _clientId, );
             if(depth == marketlib::market_depth_t::top){
+                _logger->Info((boost::format("Session | MD subscribe TOP to %1% : %2%, depth(%3%), update type(%4%)")
+                               % request.engine % request.symbol % request.depth % request.update_type).str().c_str());
                 _client->subscribe(pool,depth,_clientId,[this, reqIdStr, pool] (const std::string &exch, const std::string &pair, const std::any &data) {
                        auto marketBook = std::any_cast<BrokerModels::MarketBook>(data);
                        _logger->Debug((boost::format("Session | --> 35=W, %1%, Ask(%2%) AskSize(%3%) --- Bid(%4%) BidSize(%5%)")
@@ -311,7 +237,10 @@ bool SERUM_Data_session::operator() (const class FIX8::SERUM_Data::MarketDataReq
                         _sess->fullSnapshot(reqIdStr, pool, marketBook);
                });
             }
+
             else if(depth == marketlib::market_depth_t::full){
+                _logger->Info((boost::format("Session | MD subscribe FULL to %1% : %2%, depth(%3%), update type(%4%)")
+                               % request.engine % request.symbol % request.depth % request.update_type).str().c_str());
                 _client->subscribe(pool, depth, _clientId,
                         [this, reqIdStr, pool] (const std::string &exch, const std::string &pair, const std::any &data) {
                             auto marketDepth = std::any_cast<BrokerModels::DepthSnapshot>(data);
@@ -325,8 +254,7 @@ bool SERUM_Data_session::operator() (const class FIX8::SERUM_Data::MarketDataReq
         }
         catch(std::exception& ex)
         {
-            _logger->Error((boost::format("Session | !!! Subscribe to %1%, exception %2%")
-                    % symbol % ex.what()).str().c_str());
+            _logger->Error((boost::format("Session | !!! Subscribe to %1%, exception %2%")% symbol % ex.what()).str().c_str());
             _logger->Error((boost::format("Session | Incorrect Subscribe/Unsubscribe to %1% : %2%, depth(%3%), update type(%4%)")
                            % request.engine % request.symbol % request.depth % request.update_type).str().c_str());
             auto* _sess = const_cast<SERUM_Data_session*>(this);

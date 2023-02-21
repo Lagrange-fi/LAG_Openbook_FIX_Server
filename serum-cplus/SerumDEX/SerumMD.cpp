@@ -226,26 +226,53 @@ void SerumMD::subscribe(const instrument& instr, SubscriptionModel model, const 
 			model
 		));
 	
-	if (chnls.first == chnls.second) {
+	if (chnls.first == chnls.second)
 		subscribe(instr, model);
-	} else {
-		callback(
-			_name,
-			instr.symbol,
-			_top_snapshot[getMarketFromInstrument(instr)]
-		);
-	}
 
-	
-	_channels.insert(
-		SubscribeChannel{
-			clientId: clientId,
-			market: getMarketFromInstrument(instr),
-			instr: instr,
-			smodel: model,
-			callback: callback,
-		}
-	); 
+	auto chnl_by_client = _channels
+		.get<SubscribeChannelsByClientAndMarketAndSubscribeModel>()
+		.find(boost::make_tuple(
+			clientId,
+			getMarketFromInstrument(instr), 
+			model
+		));
+
+	if (chnl_by_client == _channels.end()) {
+		if (chnls.first != chnls.second)
+			if (model == SubscriptionModel::top) {
+				callback(
+					_name,
+					getMarketFromInstrument(instr),
+					_top_snapshot[getMarketFromInstrument(instr)]
+				);
+			}
+			else {
+				callback(
+					_name,
+					getMarketFromInstrument(instr),
+					_depth_snapshot[getMarketFromInstrument(instr)]
+				);
+			}
+				
+		_channels.insert(
+			SubscribeChannel{
+				clientId: clientId,
+				market: getMarketFromInstrument(instr),
+				instr: instr,
+				smodel: model,
+				callback: callback,
+			}
+		); 
+	}
+	else {
+		string msg = "The subscription with parameters already exists";
+		msg += ": symbol - " + getMarketFromInstrument(instr);
+		msg += ", client Id - " + clientId;
+		msg += ", subscription model - ";
+		msg += model == SubscriptionModel::top ? "top" : "full";
+
+		_logger->Error( msg.c_str() );
+	}
 }
 
 // void SerumMD::subscribe(const instrument& instr, const string& clientId, callbackTop callback) {

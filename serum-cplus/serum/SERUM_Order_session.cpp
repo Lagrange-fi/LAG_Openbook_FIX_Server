@@ -2,14 +2,13 @@
 #include <ctime>
 #include <thread>
 #include <boost/format.hpp>
-
-#include "SERUM_Order_sandbox_session.hpp"
+#include "SERUM_Order_session.hpp"
 
 #include "ConsoleLogger.h"
 
 const char* TRADE_CONN_NAME="Serum";
 
-SERUM_Order_sandbox_session::SERUM_Order_sandbox_session(const FIX8::F8MetaCntx& ctx,
+SERUM_Order_session::SERUM_Order_session(const FIX8::F8MetaCntx& ctx,
                     const FIX8::sender_comp_id& sci,
                     FIX8::Persister *persist,
                     FIX8::Logger *slogger,
@@ -21,18 +20,18 @@ SERUM_Order_sandbox_session::SERUM_Order_sandbox_session(const FIX8::F8MetaCntx&
     _logger->Debug((boost::format("OSession | construct ")).str().c_str());
 }
 
-SERUM_Order_sandbox_session::~SERUM_Order_sandbox_session()
+SERUM_Order_session::~SERUM_Order_session()
 {
     _logger->Debug((boost::format("OSession | destruct ")).str().c_str());
 }
 
-const std::string& SERUM_Order_sandbox_session::sess_id()
+const std::string& SERUM_Order_session::sess_id()
 {
     return this->get_sid().get_id();
 }
 
 // FIX8::Session implementation
-bool SERUM_Order_sandbox_session::handle_application(const unsigned seqnum, const FIX8::Message *&msg)
+bool SERUM_Order_session::handle_application(const unsigned seqnum, const FIX8::Message *&msg)
 {
     _logger->Debug((boost::format("OSession | handle_application ")).str().c_str());
     if(enforce(seqnum,msg)){
@@ -49,7 +48,7 @@ bool SERUM_Order_sandbox_session::handle_application(const unsigned seqnum, cons
     }
 }
 
-bool SERUM_Order_sandbox_session::handle_logon(const unsigned seqnum, const FIX8::Message *msg)
+bool SERUM_Order_session::handle_logon(const unsigned seqnum, const FIX8::Message *msg)
 {
     _logger->Debug((boost::format("OSession | handle_logon ")).str().c_str());
    /* try {
@@ -63,7 +62,7 @@ bool SERUM_Order_sandbox_session::handle_logon(const unsigned seqnum, const FIX8
     return FIX8::Session::handle_logon(seqnum, msg);
 }
 
-bool SERUM_Order_sandbox_session::handle_logout(const unsigned seqnum, const FIX8::Message *msg)
+bool SERUM_Order_session::handle_logout(const unsigned seqnum, const FIX8::Message *msg)
 {
     _logger->Debug((boost::format("OSession | handle_logout ")).str().c_str());
     try {
@@ -81,12 +80,12 @@ bool SERUM_Order_sandbox_session::handle_logout(const unsigned seqnum, const FIX
     return FIX8::Session::handle_logout(seqnum, msg);
 }
 
-void SERUM_Order_sandbox_session::modify_outbound(FIX8::Message *msg)
+void SERUM_Order_session::modify_outbound(FIX8::Message *msg)
 {
     FIX8::Session::modify_outbound(msg);
 }
 
-bool SERUM_Order_sandbox_session::process(const FIX8::f8String& from)
+bool SERUM_Order_session::process(const FIX8::f8String& from)
 {
     if(from.find("35=0") == -1) {
         // for all except heartbeat
@@ -95,14 +94,14 @@ bool SERUM_Order_sandbox_session::process(const FIX8::f8String& from)
     return FIX8::Session::process(from);
 }
 
-FIX8::Message *SERUM_Order_sandbox_session::generate_logon(const unsigned heartbeat_interval, const FIX8::f8String davi)
+FIX8::Message *SERUM_Order_session::generate_logon(const unsigned heartbeat_interval, const FIX8::f8String davi)
 {
     FIX8::Message* logon = FIX8::Session::generate_logon(heartbeat_interval, davi);
     return logon;
 }
 
 // FIX8::SERUM_Data::FIX8_SERUM_Data_Router implementation
-bool SERUM_Order_sandbox_session::operator() (const class FIX8::SERUM_Order::NewOrderSingle *msg) const
+bool SERUM_Order_session::operator() (const class FIX8::SERUM_Order::NewOrderSingle *msg) const
 {
     /*
      1	Account	Y	Owner, depend on DEX
@@ -185,7 +184,7 @@ bool SERUM_Order_sandbox_session::operator() (const class FIX8::SERUM_Order::New
         order.price = qty.get();
     }
 
-    auto session = const_cast<SERUM_Order_sandbox_session*>(this);
+    auto session = const_cast<SERUM_Order_session*>(this);
     marketlib::instrument_descr_t pool {.engine=TRADE_CONN_NAME,.sec_id=symbol.get(),.symbol=symbol.get()};
     // order validation
     if(order.clId.empty() || order.owner.empty() || order.secId.empty() || order.currency.empty() || order.original_qty <= 0
@@ -223,7 +222,7 @@ bool SERUM_Order_sandbox_session::operator() (const class FIX8::SERUM_Order::New
     return true;
 }
 
-bool SERUM_Order_sandbox_session::operator() (const class FIX8::SERUM_Order::OrderCancelRequest *msg) const
+bool SERUM_Order_session::operator() (const class FIX8::SERUM_Order::OrderCancelRequest *msg) const
 {
     /*
      41 	OrigClOrdID 	Y 	The unique ID of the last non-cancelled order assigned by the client.
@@ -297,7 +296,7 @@ bool SERUM_Order_sandbox_session::operator() (const class FIX8::SERUM_Order::Ord
         order.original_qty = qty.get();
     }*/
 
-    auto session = const_cast<SERUM_Order_sandbox_session*>(this);
+    auto session = const_cast<SERUM_Order_session*>(this);
     auto orderIt = _orders.find(orig_clid_str);
     if(orderIt != _orders.end()) {
         session->sendReport(orig_clid_str, marketlib::report_type_t::rt_canceled,
@@ -311,7 +310,7 @@ bool SERUM_Order_sandbox_session::operator() (const class FIX8::SERUM_Order::Ord
     return true;
 }
 
-void SERUM_Order_sandbox_session::sendReport(const std::string&clId,marketlib::report_type_t type,marketlib::order_state_t state,
+void SERUM_Order_session::sendReport(const std::string&clId,marketlib::report_type_t type,marketlib::order_state_t state,
                 const std::string&exchId,  const std::string&origClId, const std::string&text)
 {
     /*
@@ -354,7 +353,7 @@ void SERUM_Order_sandbox_session::sendReport(const std::string&clId,marketlib::r
     FIX8::Session::send(mdr);
 }
 
-void SERUM_Order_sandbox_session::sendCancelRejectReport( const std::string &clId, const std::string &text)
+void SERUM_Order_session::sendCancelRejectReport( const std::string &clId, const std::string &text)
 {
     /*
     37 	OrderId 	N 	The unique ID of the order, as returned to the client in the Execution Report in the OrderId field (37).
@@ -403,7 +402,7 @@ void SERUM_Order_sandbox_session::sendCancelRejectReport( const std::string &clI
     FIX8::Session::send(mdr);
 }
 
-void SERUM_Order_sandbox_session::sendExecutionReport(const std::string &tradeId, const std::string &clId,
+void SERUM_Order_session::sendExecutionReport(const std::string &tradeId, const std::string &clId,
                 marketlib::report_type_t type, marketlib::order_state_t state, const std::string &exchId,double lastPx, double lastShares)
 {
     /*s

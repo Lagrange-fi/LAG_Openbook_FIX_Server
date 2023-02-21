@@ -29,7 +29,7 @@ private:
 	typedef BrokerModels::Market Market;
 	typedef marketlib::order_t Order;
 	typedef marketlib::execution_report_t ExecutionReport;
-	typedef std::map < string, std::list< Order > > orders_map;
+	typedef std::map < string, std::list< ExecutionReport > > execution_reports_map;
 	typedef marketlib::instrument_descr_t Instrument;
 	typedef std::function <void(const string&, const string&, const ExecutionReport&)> callback_t;
 	typedef std::function <void(const string &exchangeName, marketlib::broker_event, const string &details)> callback_on_event;
@@ -38,7 +38,7 @@ protected:
 	logger_ptr _logger;
 	settings_ptr _settings;
 	ConnectionWrapper < SerumTrade > _connection;
-	orders_map _orders;
+	execution_reports_map _execution_reports;
 	SubscribedChannels _channels;
 	callback_on_event _onEvent;
 	

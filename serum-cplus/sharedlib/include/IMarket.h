@@ -24,5 +24,5 @@ public:
     virtual ~IMarket() = default;
 
     virtual Order send_new_order(const Instrument& instrument, const Order& order) = 0;
-    virtual Order cancel_order(const Instrument& instrument, const Order& order) = 0;
+    virtual Order cancel_order(const Instrument& instrument, const string& order) = 0;
 };

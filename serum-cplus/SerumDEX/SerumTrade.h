@@ -56,6 +56,7 @@ protected:
 	bool enabledCheck() const;
 	bool connectedCheck() const;
 	bool activeCheck() const;
+	void broadcastForMarketSubscribers(const string&, const ExecutionReport&) const;
 
 public:
 	SerumTrade(logger_ptr, settings_ptr, callback_on_event);

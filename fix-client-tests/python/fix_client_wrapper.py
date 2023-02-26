@@ -133,7 +133,10 @@ class FixApp(fix.Application):
     def subscribe(self, instrument, subscr=True, full_book=False, incrementals=False):
         request = fix44.MarketDataRequest()
         request.setField(fix.MDReqID(str(self.__reqId)))
-        request.setField(fix.MDUpdateType(5))
+        if incrementals:
+            request.setField(fix.MDUpdateType(1))
+        else:
+            request.setField(fix.MDUpdateType(0))
         if subscr:
             request.setField(fix.SubscriptionRequestType('1'))
         else:
@@ -184,12 +187,7 @@ class FixApp(fix.Application):
 
     def cancel(self, instrument, newOrdID, order):
         request = fix44.OrderCancelRequest()
-        request.setField(fix.ClOrdID(newOrdID))
-        request.setField(fix.OrigClOrdID(order["ClOrdID"]))
-        request.setField(fix.Symbol(instrument["Symbol"]))
-        request.setField(fix.Side(order["Side"]))
-        request.setField(fix.TransactTime())
-
+        request.setField(fix.ClOrdID(order["ClOrdID"]))
         fix.Session.sendToTarget(request, self.__sessionID)
         pass
 

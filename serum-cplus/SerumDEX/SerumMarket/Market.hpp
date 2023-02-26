@@ -26,6 +26,7 @@
 #include <marketlib/include/enums.h>
 #include <marketlib/include/market.h>
 #include <sharedlib/include/IPoolsRequester.h>
+#include <sharedlib/include/ILogger.h>
 #include <sharedlib/include/HTTPClient.h>
 #include <sharedlib/include/IMarket.h>
 
@@ -45,8 +46,8 @@ private:
     typedef Keypair SecretKey;
     typedef marketlib::execution_report_t ExecutionReport;
     typedef marketlib::instrument_descr_t Instrument;
-    typedef std::function <void(const string&, const Instrument&, const string&)> Callback;
     typedef std::function <void(const string&, const ExecutionReport&)> OrdersCallback;
+    typedef std::shared_ptr< ILogger > logger_ptr;
     typedef solana::PublicKey PublicKey;
 
     struct MarketLayout
@@ -63,8 +64,7 @@ private:
 
     struct MarketChannel
     {
-        string base;
-        string quote;
+        string symbol;
 		Instrument instr;
         PublicKey market_address;
         // PublicKey open_order_account;
@@ -79,12 +79,8 @@ private:
         MarketChannel,
         boost::multi_index::indexed_by<
             boost::multi_index::hashed_unique<
-                boost::multi_index::tag<struct MarketChannelsByPool>,
-                boost::multi_index::composite_key<
-                    MarketChannel,
-                    boost::multi_index::member<MarketChannel, decltype(MarketChannel::base), &MarketChannel::base >,
-					boost::multi_index::member<MarketChannel, decltype(MarketChannel::quote), &MarketChannel::quote >
-                >
+                boost::multi_index::tag<struct MarketChannelsBySymbol>,
+                boost::multi_index::member<MarketChannel, decltype(MarketChannel::symbol), &MarketChannel::symbol >
             >
         >
     >;
@@ -116,9 +112,9 @@ private:
     string _http_address;
     pools_ptr _pools;
     Orders _open_orders;
-    Callback _callback;
     OrdersCallback _orders_callback;
     listener_ptr _trade_channel;
+    logger_ptr _logger;
     MarketChannels _markets_info;
     std::map<std::string, uint64_t> _order_count_for_symbol;
     // MintAddresses_ptr _mint_addresses;
@@ -178,12 +174,12 @@ private:
 		return instr.symbol;
 	}
 public:
-    SerumMarket(const string&, const string&, const string&, pools_ptr, listener_ptr, Callback, OrdersCallback, const string& );
+    SerumMarket(const string&, const string&, const string&, logger_ptr, pools_ptr, listener_ptr, OrdersCallback, const string& );
     // SerumMarket(const string&, pools_ptr, Callback, OrdersCallback);
     // SerumMarket(const SerumMarket&);
 
     Order send_new_order(const Instrument&, const Order&) override;
-    Order cancel_order(const Instrument&, const Order&) override;
+    Order cancel_order(const Instrument&, const string&) override;
 
     ~SerumMarket();
 };

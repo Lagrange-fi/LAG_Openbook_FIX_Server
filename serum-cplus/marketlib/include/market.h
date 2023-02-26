@@ -76,6 +76,7 @@ namespace marketlib
         std::string     origClId;
         std::string     exchId;
         std::string     secId;
+        std::string     transaction_hash;
         time_t          time ;
         order_type_t    orderType ;
         report_type_t   type;
@@ -84,6 +85,7 @@ namespace marketlib
         order_state_t   state;
         order_side_t    side ;
         ord_rej_reason  rejReason;
+        double          orderQty;
         double          limitPrice;
         double          avgPx;
         double          lastPx;

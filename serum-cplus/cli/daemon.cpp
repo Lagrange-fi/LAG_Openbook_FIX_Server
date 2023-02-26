@@ -18,9 +18,14 @@
 #include <sharedlib/include/Logger.h>
 #include <serum/SERUM_Data_session.hpp>
 #include <serum/SERUM_Order_sandbox_session.hpp>
+#include <serum/SERUM_Order_session.hpp>
 
 #include <SerumDEX/SerumMD.h>
 #include <SerumDEX/PoolRequester/PoolsRequester.h>
+#include <SerumDEX/SerumMarket/Market.hpp>
+#include <SerumDEX/SerumMarket/models.hpp>
+#include <SerumDEX/SerumTrade.h>
+
 #include <serum/ConsoleLogger.h>
 #include <serum/SerumSettings.h>
 
@@ -61,6 +66,21 @@ int main(int argc, char **argv) {
                 new SerumMD(logger,settings, std::make_shared< PoolsRequester >( logger, settings ),
                             [](const std::string &exchangeName, marketlib::broker_event, const std::string &details) {}))
         );
+
+        std::shared_ptr < IPoolsRequester > pools(new PoolsRequester(logger, settings, "./market_ord.json"));
+        std::shared_ptr < IListener >  trade_channel (new SerumTrade ( logger, settings, [&logger](const std::string& exch, marketlib::broker_event event, const std::string& info) {logger->Trace(info.c_str());}));
+        if(order_part)
+        {
+            try {
+                logger->Info((boost::format("Session | Serum TradeChannel start ")).str().c_str());
+                trade_channel->start();
+            }
+            catch(std::exception& ex)
+            {
+                logger->Error((boost::format("Session | Serum TradeChannel exception(%1%)")% ex.what()).str().c_str());
+            }
+        }
+
         if(md_part)
         {
             try {
@@ -79,6 +99,8 @@ int main(int argc, char **argv) {
                 new FIX8::ServerSession<SERUM_Data_session>(FIX8::SERUM_Data::ctx(), conf_file, "SERUM_MD"));
         std::unique_ptr<FIX8::ServerSessionBase> ms_ord_sand(
                 new FIX8::ServerSession<SERUM_Order_sandbox_session>(FIX8::SERUM_Data::ctx(), conf_file, "SERUM_ORD_SAND"));
+        std::unique_ptr<FIX8::ServerSessionBase> ms_ord(
+                new FIX8::ServerSession<SERUM_Order_session>(FIX8::SERUM_Data::ctx(), conf_file, "SERUM_ORD"));
 
         typedef std::shared_ptr<FIX8::SessionInstanceBase> ServerSession;
         std::vector<ServerSession> sessions;
@@ -121,6 +143,17 @@ int main(int argc, char **argv) {
                     //const FIX8::ProcessModel pm(ms->get_process_model(ms->_ses));
                     inst->start(false);
                 }
+            if(order_part)
+                if (ms_ord->poll())
+                {
+                    std::shared_ptr<FIX8::SessionInstanceBase> inst(ms_ord->create_server_instance());
+                    sessions.push_back(inst);
+                    printf("Order Session added, count= %d\n", (int)sessions.size());
+                    //inst->session_ptr()->control() |= FIX8::Session::print;
+                    //FIX8::GlobalLogger::log("global_logger");
+                    //const FIX8::ProcessModel pm(ms->get_process_model(ms->_ses));
+                    inst->start(false);
+                }
         }
 
         std::for_each(sessions.begin(),sessions.end(),[](ServerSession& sess)
@@ -133,6 +166,11 @@ int main(int argc, char **argv) {
 
 
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+        if(order_part)
+        {
+            trade_channel->stop();
+        }
 
         if(md_part)
         {

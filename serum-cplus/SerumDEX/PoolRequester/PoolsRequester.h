@@ -23,7 +23,7 @@ private:
     typedef std::string string;
 
 public:
-    PoolsRequester(logger_ptr, settings_ptr, std::string path = "./data.json");
+    PoolsRequester(logger_ptr, settings_ptr, std::string path = "");
     void loadPools() override;
     std::list<Instrument> getPools() override;
     const Instrument& getPool(const Instrument&) override;

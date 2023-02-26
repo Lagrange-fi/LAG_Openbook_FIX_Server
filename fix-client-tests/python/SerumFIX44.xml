@@ -113,11 +113,11 @@
    <field name='TradingSessionSubID' required='N' />
   </message>
   <message name='ExecutionReport' msgtype='8' msgcat='app'>
-   <field name='OrderID' required='Y' />
+   <field name='OrderID' required='N' />
    <field name='SecondaryOrderID' required='N' />
    <field name='SecondaryClOrdID' required='N' />
    <field name='SecondaryExecID' required='N' />
-   <field name='ClOrdID' required='N' />
+   <field name='ClOrdID' required='Y' />
    <field name='OrigClOrdID' required='N' />
    <field name='ClOrdLinkID' required='N' />
    <field name='QuoteRespID' required='N' />
@@ -132,7 +132,7 @@
    <field name='CrossID' required='N' />
    <field name='OrigCrossID' required='N' />
    <field name='CrossType' required='N' />
-   <field name='ExecID' required='Y' />
+   <field name='ExecID' required='N' />
    <field name='ExecRefID' required='N' />
    <field name='ExecType' required='Y' />
    <field name='OrdStatus' required='Y' />
@@ -149,10 +149,10 @@
    <field name='SettlDate' required='N' />
    <field name='CashMargin' required='N' />
    <field name='ClearingFeeIndicator' required='N' />
-   <component name='Instrument' required='Y' />
+   <component name='Instrument' required='N' />
    <component name='FinancingDetails' required='N' />
    <component name='UndInstrmtGrp' required='N' />
-   <field name='Side' required='Y' />
+   <field name='Side' required='N' />
    <component name='Stipulations' required='N' />
    <field name='QtyType' required='N' />
    <component name='OrderQtyData' required='N' />
@@ -191,9 +191,9 @@
    <field name='TradingSessionSubID' required='N' />
    <field name='TimeBracket' required='N' />
    <field name='LastCapacity' required='N' />
-   <field name='LeavesQty' required='Y' />
-   <field name='CumQty' required='Y' />
-   <field name='AvgPx' required='Y' />
+   <field name='LeavesQty' required='N' />
+   <field name='CumQty' required='N' />
+   <field name='AvgPx' required='N' />
    <field name='DayOrderQty' required='N' />
    <field name='DayCumQty' required='N' />
    <field name='DayAvgPx' required='N' />
@@ -253,12 +253,12 @@
    <component name='MiscFeesGrp' required='N' />
   </message>
   <message name='OrderCancelReject' msgtype='9' msgcat='app'>
-   <field name='OrderID' required='Y' />
+   <field name='OrderID' required='N' />
    <field name='SecondaryOrderID' required='N' />
    <field name='SecondaryClOrdID' required='N' />
    <field name='ClOrdID' required='Y' />
    <field name='ClOrdLinkID' required='N' />
-   <field name='OrigClOrdID' required='Y' />
+   <field name='OrigClOrdID' required='N' />
    <field name='OrdStatus' required='Y' />
    <field name='WorkingIndicator' required='N' />
    <field name='OrigOrdModTime' required='N' />
@@ -1005,7 +1005,6 @@
    <component name='InstrmtStrkPxGrp' required='Y' />
    <component name='UndInstrmtStrkPxGrp' required='N' />
   </message>
-  <message name='XMLnonFIX' msgtype='n' msgcat='admin' />
   <message name='RegistrationInstructions' msgtype='o' msgcat='app'>
    <field name='RegistID' required='Y' />
    <field name='RegistTransType' required='Y' />

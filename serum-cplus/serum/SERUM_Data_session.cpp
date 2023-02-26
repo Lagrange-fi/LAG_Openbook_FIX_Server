@@ -1,9 +1,12 @@
 #include <functional>
 #include <ctime>
+#include <list>
+#include <boost/format.hpp>
+
 #include "SERUM_Data_session.hpp"
 
-#include <SerumDEX/SerumMD.h>
-#include <SerumDEX/PoolRequester/PoolsRequester.h>
+//#include <SerumDEX/SerumMD.h>
+//#include <SerumDEX/PoolRequester/PoolsRequester.h>
 #include "ConsoleLogger.h"
 
 const char* CONN_NAME="Serum";
@@ -135,8 +138,6 @@ bool SERUM_Data_session::operator() (const class FIX8::SERUM_Data::SecurityListR
 
     auto pools = _client->getInstruments();
 
-    _logger->Info( (boost::format("Session | --> 35=y, count = %1%") % (int)pools.size() ).str().c_str() );
-
     auto* _sess = const_cast<SERUM_Data_session*>(this);
     _sess->securityList(reqIdStr,marketlib::security_request_result_t::srr_valid,pools);
 
@@ -220,21 +221,23 @@ bool SERUM_Data_session::operator() (const class FIX8::SERUM_Data::MarketDataReq
         update_type
     };
 
-    //marketlib::instrument_descr_t pool{CONN_NAME, "", "ETH/USDC", "USDC" };
     marketlib::instrument_descr_t pool {.engine=CONN_NAME,.sec_id=symbol.get(),.symbol=symbol.get()};
     if(subscr_type==marketlib::subscription_type::shapshot_update)
     {
         try{
-            //_client->subscribe(pool, depth, _clientId, );
             if(depth == marketlib::market_depth_t::top){
                 _logger->Info((boost::format("Session | MD subscribe TOP to %1% : %2%, depth(%3%), update type(%4%)")
                                % request.engine % request.symbol % request.depth % request.update_type).str().c_str());
+
+                //_client->subscribe(pool,depth,_clientId,[] (const std::string &exch, const std::string &pair, const std::any &data) {});
+
+
                 _client->subscribe(pool,depth,_clientId,[this, reqIdStr, pool] (const std::string &exch, const std::string &pair, const std::any &data) {
-                       auto marketBook = std::any_cast<BrokerModels::MarketBook>(data);
-                       _logger->Debug((boost::format("Session | --> 35=W, %1%, Ask(%2%) AskSize(%3%) --- Bid(%4%) BidSize(%5%)")
-                                       % pair % marketBook.askPrice% marketBook.askSize% marketBook.bidPrice% marketBook.bidSize).str().c_str());
-                       auto* _sess = const_cast<SERUM_Data_session*>(this);
-                        _sess->fullSnapshot(reqIdStr, pool, marketBook);
+                   auto marketBook = std::any_cast<BrokerModels::MarketBook>(data);
+                    _logger->Debug((boost::format("Session | --> 35=W, %1%, Ask(%2%) AskSize(%3%) --- Bid(%4%) BidSize(%5%)")
+                                    % pair % marketBook.askPrice% marketBook.askSize% marketBook.bidPrice% marketBook.bidSize).str().c_str());
+                   auto* _sess = const_cast<SERUM_Data_session*>(this);
+                    _sess->fullSnapshot(reqIdStr, pool, marketBook);
                });
             }
 
@@ -318,27 +321,40 @@ void SERUM_Data_session::securityList(const std::string &reqId, marketlib::secur
     '5' 	Request for instrument data not supported
     component block  <Instrument>	N N
      */
+    std::list<marketlib::instrument_descr_t>::const_iterator it = pools.begin();
+    while(it != pools.end())
+    {
+        auto *mdr(new FIX8::SERUM_Data::SecurityList);
+
+        *mdr    << new FIX8::SERUM_Data::SecurityReqID(reqId)
+                << new FIX8::SERUM_Data::SecurityResponseID("resp" + reqId)
+                << new FIX8::SERUM_Data::SecurityRequestResult(result);
+
+        int offset = 0;
+        FIX8::GroupBase *noin(mdr->find_group<FIX8::SERUM_Data::SecurityList::NoRelatedSym>());
+        for (; offset <100 && it != pools.end() ; ++it, offset++) {
+            FIX8::MessageBase *noin_sym(noin->create_group());
+            *noin_sym << new FIX8::SERUM_Data::SecurityExchange(it->engine)
+                      << new FIX8::SERUM_Data::Symbol(it->symbol)
+                      << new FIX8::SERUM_Data::Currency(it->quote_currency);
+            *noin << noin_sym;
+        }
+        *mdr   << new FIX8::SERUM_Data::NoRelatedSym(offset) ;
+        *mdr << noin;
+
+        _logger->Info( (boost::format("Session | --> 35=y, count = %1%") % (int)offset ).str().c_str() );
+
+        FIX8::Session::send(mdr);
+    }
+
     auto *mdr(new FIX8::SERUM_Data::SecurityList);
 
     *mdr    << new FIX8::SERUM_Data::SecurityReqID(reqId)
             << new FIX8::SERUM_Data::SecurityResponseID("resp" + reqId)
             << new FIX8::SERUM_Data::SecurityRequestResult(result)
-            << new FIX8::SERUM_Data::NoRelatedSym(pools.size()) ;
-
-    FIX8::GroupBase *noin(mdr->find_group<FIX8::SERUM_Data::SecurityList::NoRelatedSym >());
-    for(const auto& pool_info : pools)
-    {
-        FIX8::MessageBase *noin_sym(noin->create_group());
-        *noin_sym << new FIX8::SERUM_Data::SecurityExchange(pool_info.engine)
-                  << new FIX8::SERUM_Data::Symbol (pool_info.symbol)
-                  << new FIX8::SERUM_Data::Currency (pool_info.quote_currency)
-                  //<< new FIX8::SERUM_Data::MinQty (pool_info.tick_precision)
-                  //<< new FIX8::SERUM_Data::PriceDelta (pool_info.tick_precision)
-                  ;
-        *noin << noin_sym;
-    }
-    *mdr << noin;
+            << new FIX8::SERUM_Data::NoRelatedSym((int)0) ;
     FIX8::Session::send(mdr);
+
 }
 
 void SERUM_Data_session::marketReject(const std::string& reqId, marketlib::ord_rej_reason reason)
@@ -482,48 +498,3 @@ void SERUM_Data_session::fullSnapshot(const std::string& reqId, const marketlib:
 
     FIX8::Session::send(mdr);
 }
-
-// IBrokerApplication
-
-/*void SERUM_Data_session::onEvent(const std::string &exchangeName, IBrokerClient::BrokerEvent data, const std::string &details)
-{
-    static const char* eventStr[]=
-    {
-            "Info",
-            "Debug",
-            "Error",
-            "SessionLogon",
-            "SessionLogout",
-            "CoinSubscribed",
-            "CoinUnsubscribed",
-            "ConnectorStarted",
-            "ConnectorStopped",
-            "CoinSubscribedFault",
-            "CoinUnsubscribedFault",
-            "SubscribedCoinIsNotValid",
-    };
-    _logger->Info((boost::format("Session | DEX::onEvent from exch('%1%'), event(%2%), details(%3%)")
-            % exchangeName, eventStr[(int)data], details).c_str());
-}*/
-/*
-
-void SERUM_Data_session::onReport(const std::string &exchangeName, const std::string &symbol, const BrokerModels::MarketBook&marketBook)
-{
-    _logger->Debug((boost::format("Session | --> 35=W, %1%, Ask(%2%) AskSize(%3%) --- Bid(%4%) BidSize(%5%)")
-                  % symbol
-                  % marketBook.askPrice
-                  % marketBook.askSize
-                  % marketBook.bidPrice
-                  % marketBook.bidSize).str().c_str());
-
-    fullSnapshot("123",marketlib::instrument_descr_t{.engine=CONN_NAME,.sec_id=symbol,.symbol=symbol},marketBook);
-}
-
-void SERUM_Data_session::onReport(const std::string &exchangeName, const std::string &symbol, const BrokerModels::DepthSnapshot&depth)
-{
-    _logger->Debug((boost::format("Session | --> 35=W, %1% , count = %2%")
-                    % symbol % (depth.bids.size() + depth.asks.size()) ).str().c_str());
-    fullSnapshot("123",marketlib::instrument_descr_t{.engine="Serum",.sec_id=symbol,.symbol=symbol},depth);
-}
-*/
-

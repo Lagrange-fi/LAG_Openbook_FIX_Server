@@ -15,7 +15,8 @@ class Client:
         self.price_application.instruments_func = self.on_instruments
         self.price_application.snapshot_func = self.on_full_snapshot
         self.price_application.incremental_func = self.on_incremental_snapshot
-        self.instrument = {
+        self.pools = []
+        self.instrument1 = {
             'First': "ETH",
             'Second': "USDC",
             'Symbol': "ETH/USDC",
@@ -31,7 +32,7 @@ class Client:
             # do some logic
             time.sleep(5)
             self.price_application.get_instruments()
-            self.price_application.subscribe(self.instrument, True, False)
+            #self.price_application.subscribe(self.instrument1, True, False)
             #self.price_application.subscribe(self.instrument, True, True)
 
     def on_incremental_snapshot(self, broker, snapshot):
@@ -43,9 +44,16 @@ class Client:
             print(item)
 
     def on_instruments(self, broker, pools):
-        for pool in pools:
-            print("POOL {}: {}, Currency: {}".format(pool['SecurityExchange'], pool['Symbol'], pool['Currency']))
+        self.pools = self.pools + pools
 
+    def subscribePools(self, count):
+        i = 0
+        for pool in self.pools:
+            print("POOL {}: {}, Currency: {}".format(pool['SecurityExchange'], pool['Symbol'], pool['Currency']))
+            self.price_application.subscribe(pool, True, False)
+            i = i + 1
+            if i > count:
+                break
 
 if __name__ == '__main__':
     try:
@@ -57,7 +65,9 @@ if __name__ == '__main__':
         message = ''
         while True:
             message = input('enter e to exit the app\n')
-            if message == "e":
+            if message == 's':
+                logic.subscribePools(50)
+            if message == 'e':
                 break
 
         price_initiator.stop()

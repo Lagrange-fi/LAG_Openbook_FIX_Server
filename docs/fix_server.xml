@@ -15,7 +15,7 @@
 			    tcp_send_buffer="100663296"
 			    session_log="session_log_md"
 			    protocol_log="protocol_log_md"
-                            reset_sequence_numbers="true"
+			    reset_sequence_numbers="true"
 			    persist="mem0"
 			    process_model="threaded" />
 
@@ -32,13 +32,13 @@
 				tcp_nodelay="true"
 			    tcp_recv_buffer="100663296"
 			    tcp_send_buffer="100663296"
-			    session_log="session_log_ord"
-			    protocol_log="protocol_log_ord"
+			    session_log="session_log_sand_ord"
+			    protocol_log="protocol_log_sand_ord"
 			    reset_sequence_numbers="false"
 			    persist="file0"
 			    process_model="threaded" />
 
-	<session name="SERUM_ORD_SSL"
+	<session name="SERUM_ORD"
 				role = "acceptor"
 				fix_version="4400"
 			    no_chksum="true"
@@ -51,8 +51,8 @@
 				tcp_nodelay="true"
 			    tcp_recv_buffer="100663296"
 			    tcp_send_buffer="100663296"
-			    session_log="session_log_ord_ssl"
-			    protocol_log="protocol_log_ord_ssl"
+			    session_log="session_log_ord"
+			    protocol_log="protocol_log_ord"
 			    reset_sequence_numbers="false"
 			    persist="file0"
 			    process_model="threaded" />
@@ -72,13 +72,34 @@
 
 	<log 	name="session_log_md"
 			type="session"
-			filename="./logs_md/fix8_session.log"
+			filename="./logs_md/fix8_md_session.log"
 			flags="timestamp|sequence|compress|thread"/>
 
 	<log 	name="protocol_log_md"
 			type="protocol"
-			filename="./logs_md/fix8_protocol.log"
+			filename="./logs_md/fix8_md_protocol.log"
+			flags="timestamp|append|inbound|outbound"/>
+
+	<log 	name="session_log_sand_ord"
+			type="session"
+			filename="./logs_md/fix8_sand_ord_session.log"
+			flags="timestamp|sequence|compress|thread"/>
+
+	<log 	name="protocol_log_sand_ord"
+			type="protocol"
+			filename="./logs_md/fix8_sand_ord_protocol.log"
+			flags="timestamp|append|inbound|outbound"/>
+
+	<log 	name="session_log_ord"
+			type="session"
+			filename="./logs_md/fix8_ord_session.log"
+			flags="timestamp|sequence|compress|thread"/>
+
+	<log 	name="protocol_log_ord"
+			type="protocol"
+			filename="./logs_md/fix8_ord_protocol.log"
 			flags="timestamp|append|inbound|outbound"/>
 
 	<!--https://fix8.org/fix8/html/structFIX8_1_1SslContext.html: none, relaxed, strict, once-->
+
 </fix8>

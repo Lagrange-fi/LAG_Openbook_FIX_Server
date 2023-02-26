@@ -12,10 +12,14 @@
 #include <marketlib/include/market.h>
 #include <marketlib/include/BrokerModels.h>
 #include <sharedlib/include/IBrokerClient.h>
+#include <sharedlib/include/IPoolsRequester.h>
+#include <sharedlib/include/IListener.h>
+#include <sharedlib/include/IMarket.h>
 
 class ILogger;
 class ISettings;
 class IBrokerClient;
+class SerumMarket;
 
 class SERUM_Order_session : public FIX8::Session ,
                             public FIX8::SERUM_Order::FIX8_SERUM_Order_Router{
@@ -26,6 +30,11 @@ public :
                        FIX8::Logger *logger=nullptr,
                        FIX8::Logger *plogger=nullptr);
     virtual ~SERUM_Order_session();
+
+    void setupOpenbook(const std::shared_ptr < IPoolsRequester >& pools, std::shared_ptr < IListener >  trade_channel );
+
+    void instrumentCallback(const std::string& name, const marketlib::instrument_descr_t& inst, const std::string& info);
+    void reportCallback(const std::string& name, const marketlib::execution_report_t& execution_report);
 
 private:
 
@@ -54,16 +63,14 @@ private:
     //void onReport(const std::string& exchangeName, const std::string &symbol, const marketlib::execution_report_t&) override;
 
     // FIX response implementation
-    void sendExecutionReport(const std::string &tradeId, const std::string &clId,
-                             marketlib::report_type_t type, marketlib::order_state_t state, const std::string &exchId,
-                             double lastPx, double lastShares);
-    void sendReport(const std::string&clId,marketlib::report_type_t,marketlib::order_state_t,
-                    const std::string&exId="",const std::string&origClId="", const std::string&text="") ;
+    void sendExecutionReport(const marketlib::execution_report_t& report);
+    void sendReport(const marketlib::execution_report_t& report);
     void sendCancelRejectReport(const std::string &clId, const std::string &text);
 
     const std::string& sess_id();
 
 private:
+    //IMarket _market;
+    std::shared_ptr <SerumMarket> _market;
     std::shared_ptr < ILogger > _logger;
-    mutable  std::unordered_map<std::string, marketlib::order_t>  _orders;
 };

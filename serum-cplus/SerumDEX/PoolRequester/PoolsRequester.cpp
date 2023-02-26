@@ -8,7 +8,8 @@ using namespace std;
 PoolsRequester::PoolsRequester(logger_ptr logger, settings_ptr settings, std::string path):
 	_logger(logger), _settings(settings), _pools(), _path(path), _pools_list()
 {
-	loadPoolsFromJson();
+	if (_path.size())
+		loadPoolsFromJson();
 	loadPoolList();
 }
 
@@ -47,19 +48,17 @@ void PoolsRequester::loadPoolList()
 	// _pools_list = std::list< Pool >();
 	auto parsed_data = boost::json::parse(response);
 	for( auto pool : parsed_data.as_array()) {
-
 		string symbol = AS_STR(pool.at("name"));
-		_pools_list.push_back(
-			Instrument{
-				engine: "OpenBook",
-				symbol:	symbol, 
-				base_currency: symbol.substr(0, symbol.find("/")),
-				quote_currency: symbol.substr(symbol.find("/") + 1),
-				address: AS_STR(pool.at("address")), 
-				program_id: AS_STR(pool.at("programId")),
-				deprecated: pool.at("deprecated").as_bool()
-			}
-		);
+
+        Instrument instr;
+        instr.engine = "OpenBook";
+        instr.symbol=	symbol;
+        instr.base_currency= symbol.substr(0, symbol.find("/"));
+        instr.quote_currency= symbol.substr(symbol.find("/") + 1);
+        instr.address= AS_STR(pool.at("address"));
+        instr.program_id= AS_STR(pool.at("programId"));
+        instr.deprecated= pool.at("deprecated").as_bool();
+		_pools_list.push_back(instr);
     }
 }
 
@@ -117,8 +116,7 @@ const PoolsRequester::Instrument& PoolsRequester::getPool(const Instrument& inst
 {
 	if (_pools.InstrumentsList().size()) {
 		auto pool = std::find_if(_pools.InstrumentsList().begin(), _pools.InstrumentsList().end(), [&instrument](const InstrumentJson& i){ 
-			return instrument.base_currency == i.GetInstrument().base_currency && 
-				instrument.quote_currency == i.GetInstrument().quote_currency;
+			return instrument.symbol == i.GetInstrument().symbol;
 		});
 
 		if (pool != std::end(_pools.InstrumentsList()))
@@ -135,7 +133,8 @@ const PoolsRequester::Instrument& PoolsRequester::getPool(const Instrument& inst
 	
 	auto new_pool = getPoolInfoFromServer(*p);
 	_pools.PushBackInstrument(new_pool);
-	savePoolsToJson();
+	if (_path.size())
+		savePoolsToJson();
 	return _pools.InstrumentsList().back();
 }
 

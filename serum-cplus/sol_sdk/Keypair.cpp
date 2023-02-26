@@ -54,11 +54,13 @@ namespace solana
     {
 
         auto set_bytes = [](bytes& dest, const CryptoPP::Integer& src, size_t shift = 0) {
+            string hex_;
             std::stringstream temp;
             temp << std::hex << src;
-            string hex_;
             temp >> hex_;
             hex_.pop_back();
+            while (hex_.size() < 64)
+                hex_.push_back('0');
             std::string hash = boost::algorithm::unhex(hex_);
             std::reverse(hash.begin(), hash.end());
             std::copy(hash.begin(), hash.end(), dest.begin() + shift);

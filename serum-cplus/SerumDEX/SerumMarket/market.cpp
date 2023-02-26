@@ -2,10 +2,10 @@
 using namespace solana; 
 
 SerumMarket::SerumMarket(
-    const string& pubkey, const string& secretkey, const string& http_address, 
-    pools_ptr pools, listener_ptr listener, Callback callback, OrdersCallback orders_callback, const string& market_id): 
-_pubkey(pubkey), _secretkey(secretkey), _http_address(http_address), 
-_pools(pools), _trade_channel(listener),_callback(callback), _message_count(0), _orders_callback(orders_callback),
+    const string& pubkey, const string& secretkey, const string& http_address, logger_ptr logger,
+    pools_ptr pools, listener_ptr listener, OrdersCallback orders_callback, const string& market_id): 
+_pubkey(pubkey), _secretkey(secretkey), _http_address(http_address), _logger(logger),
+_pools(pools), _trade_channel(listener), _message_count(0), _orders_callback(orders_callback),
 _order_count_for_symbol(), _name(market_id)
 {}
 
@@ -57,7 +57,7 @@ SerumMarket::Order SerumMarket::send_new_order(const Instrument& instrument_, co
         }
     }
     catch (string e) {
-        _callback(_name, instrument_, "Failed to get information: " + e);
+        _logger->Error(( boost::format(R"(Failed to get information: %1%)") % e ).str().c_str());
         return order_;
     }
 
@@ -82,12 +82,12 @@ SerumMarket::Order SerumMarket::send_new_order(const Instrument& instrument_, co
             signers,
             _pubkey
         );
-        _callback(_name, instrument_, "The order is sent: " + res);
-        order.transaction_hash = res;
+        _logger->Debug(( boost::format(R"(The order is sent: %1%)") % res).str().c_str() );
+        order.transaction_hash = string(boost::json::parse(res).at("result").as_string().c_str());
     }
 
     catch (string e) {
-        _callback(_name, instrument_, "Failed to send the order: " + e);
+        _logger->Error(( boost::format(R"(Failed to send the order: %1%)") % e).str().c_str());
         return order_;
     }
 
@@ -99,19 +99,35 @@ SerumMarket::Order SerumMarket::send_new_order(const Instrument& instrument_, co
     return *(_open_orders.begin());
 }
 
-SerumMarket::Order SerumMarket::cancel_order(const Instrument& instrument_, const Order& order_)
+SerumMarket::Order SerumMarket::cancel_order(const Instrument& instrument, const string& client_id)
 {
     MarketChannel market_info;
     OpenOrdersAccountInfo orders_account_info;
     try {
-        market_info = get_market_info(instrument_, _pubkey);
+        market_info = get_market_info(instrument, _pubkey);
         orders_account_info = get_orders_account_info(market_info.instr, _pubkey);        
     }
     catch (string e) {
-        _callback(_name, instrument_, "Failed to get information: " + e);
-        return order_;
+        _logger->Error(( boost::format(R"(Failed to get information: %1%)") % e).str().c_str());
+        SerumMarket::Order order;
+        order.clId = client_id;
+        order;
     }
-    
+
+    CancelOrderV2ByClientIdParams cancelOrderParam;
+    cancelOrderParam.market= market_info.market_address;
+    cancelOrderParam.bids= market_info.parsed_market.bids;
+    cancelOrderParam.asks= market_info.parsed_market.asks;
+    cancelOrderParam.event_queue= market_info.parsed_market.event_queue;
+    cancelOrderParam.open_orders= orders_account_info.account;
+    cancelOrderParam.owner= _pubkey;
+    cancelOrderParam.client_id= strtoul(client_id.c_str(), nullptr, 0);
+    cancelOrderParam.program_id= MARKET_KEY;
+
+    Transaction txn;
+    txn.add_instruction(new_cancel_order_by_client_id_v2(cancelOrderParam));
+
+    /*
     Transaction txn;
     txn.add_instruction(
         new_cancel_order_by_client_id_v2(
@@ -122,25 +138,32 @@ SerumMarket::Order SerumMarket::cancel_order(const Instrument& instrument_, cons
                 event_queue: market_info.parsed_market.event_queue,
                 open_orders: orders_account_info.account,
                 owner: _pubkey,
-                client_id: strtoul(order_.clId.c_str(), nullptr, 0),
+                client_id: strtoul(client_id.c_str(), nullptr, 0),
                 program_id: MARKET_KEY
             }
         )
     );
+     */
     Transaction::Signers signers;
     signers.push_back(_secretkey);
+
+
+    Order order ;
+    order.clId= client_id;
+    order.state= marketlib::order_state_t::ost_Canceled;
+    
     try{
         auto res = send_transaction(txn, signers);
-        _callback(_name, instrument_, "The order is sent: " + res);
+        order.transaction_hash = string(boost::json::parse(res).at("result").as_string().c_str());
+        _logger->Debug(( boost::format(R"(The order is sent: %1%)") % res).str().c_str());
     }
     catch (string e)
     {
-        _callback(_name, instrument_, "Failed to send the order: " + e);
-        return order_;
+        _logger->Error((boost::format(R"(Failed to send the order: %1%)") % e).str().c_str());
+        Order order;
+        order.clId= client_id;
     }
     
-    auto order = order_;
-    order.state = marketlib::order_state_t::ost_Canceled;
     return order;
 }
 
@@ -241,11 +264,8 @@ SerumMarket::string SerumMarket::place_order(
 
 const SerumMarket::MarketChannel& SerumMarket::get_market_info(const Instrument& instrument_, const PublicKey& pubkey_)
 {
-    auto market_info = _markets_info.get<MarketChannelsByPool>()
-		.find(boost::make_tuple(
-			instrument_.base_currency,
-			instrument_.quote_currency
-		));
+    auto market_info = _markets_info.get<MarketChannelsBySymbol>()
+		.find(instrument_.symbol);
 
     if (market_info == _markets_info.end()) {
         auto pool = _pools->getPool(instrument_);
@@ -260,8 +280,7 @@ const SerumMarket::MarketChannel& SerumMarket::get_market_info(const Instrument&
 SerumMarket::MarketChannel SerumMarket::create_market_info(const Instrument& instr_, const PublicKey& pubkey_)
 {
     return MarketChannel {
-        base: instr_.base_currency,
-        quote: instr_.quote_currency,
+        symbol: instr_.symbol,
         instr: instr_,
         market_address: instr_.address,
         parsed_market: get_market_layout(instr_.address),
@@ -718,11 +737,34 @@ void SerumMarket::check_order(const Instrument& instrument_)
             auto order = _open_orders.get<OrderByCliId>()
             .find(exec_report_.clId);
 
-            if (order == _open_orders.end()) 
+            if (order == _open_orders.end())
                 return;
 
             _open_orders.modify(order, change_order_status(exec_report_.state));
-            _orders_callback(_name, exec_report_);
+
+            ExecutionReport report;
+            report.tradeId=            exec_report_.tradeId;
+            report.clId=               exec_report_.clId;
+            report.origClId=           exec_report_.origClId;
+            report.exchId=             exec_report_.exchId;
+            report.secId=              exec_report_.secId;
+            report.transaction_hash=   order->transaction_hash;
+            report.time=               exec_report_.time;
+            report.orderType=          exec_report_.orderType;
+            report.type=               exec_report_.type;
+            report.transType=          exec_report_.transType;
+            report.tif=                exec_report_.tif;
+            report.state=              exec_report_.state;
+            report.side=               exec_report_.side;
+            report.rejReason=          exec_report_.rejReason;
+            report.limitPrice=         exec_report_.limitPrice;
+            report.avgPx=              exec_report_.avgPx;
+            report.lastPx=             exec_report_.lastPx;
+            report.leavesQty=          exec_report_.leavesQty;
+            report.cumQty=             exec_report_.cumQty;
+            report.lastShares=         exec_report_.lastShares;
+            report.text=               exec_report_.text;
+            _orders_callback(_name, report);
 
             if (order->isCompleted()) {
                 _open_orders.erase(order);

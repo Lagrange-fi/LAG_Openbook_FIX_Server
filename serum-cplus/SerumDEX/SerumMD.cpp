@@ -379,10 +379,15 @@ void SerumMD::unsubscribeForClientId(const string& clientId) {
 			clientId
 		));
 
+	std::list<std::pair<instrument, SubscriptionModel>> info;
 	while(chnls.first != chnls.second) {
-		unsubscribe(chnls.first->instr, chnls.first->smodel, clientId);
+		info.push_back(std::pair<instrument, SubscriptionModel>
+			(chnls.first->instr, chnls.first->smodel));
 		++chnls.first;
 	}
+
+	for (const auto& a : info)
+		unsubscribe(a.first, a.second, clientId);
 }
 
 static size_t writeCallback(void* content, size_t size, size_t count, void* result) {

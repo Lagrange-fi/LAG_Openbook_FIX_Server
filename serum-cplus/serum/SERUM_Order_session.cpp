@@ -1,12 +1,21 @@
 #include <functional>
 #include <ctime>
 #include <thread>
-#include <boost/format.hpp>
+#include <memory>
+#include <functional>
+
+#include <SerumDEX/SerumMarket/Market.hpp>
+#include <SerumDEX/SerumMarket/models.hpp>
+#include <SerumDEX/SerumTrade.h>
+
 #include "SERUM_Order_session.hpp"
 
 #include "ConsoleLogger.h"
 
 const char* TRADE_CONN_NAME="Serum";
+
+#define PUBKEY "5ejVgdkJkgwptewzs5CLYdm6vJxpEL47sErAcnom6i8A"
+#define SECRETKEY "4Vi55eAt4aCfPGrbQKWjESK9UkKvb8AU7jwrzj8ajeA8dbPXEXwB4L1uhkdDEzoZ8bWhJXoRFXcE7aeeve4seARp"
 
 SERUM_Order_session::SERUM_Order_session(const FIX8::F8MetaCntx& ctx,
                     const FIX8::sender_comp_id& sci,
@@ -18,7 +27,63 @@ SERUM_Order_session::SERUM_Order_session(const FIX8::F8MetaCntx& ctx,
         _logger(new ConsoleLogger)
 {
     _logger->Debug((boost::format("OSession | construct ")).str().c_str());
+    /*
+    auto market = SerumMarket(
+            PUBKEY,
+            SECRETKEY,
+            "https://nd-664-169-151.p2pify.com/a89ccd991de179587a0b8e3356409a9b",
+            pools,
+            trade_channel,
+            [](const string& name, const Instrument& inst, const string& info){
+                std::cout << name << " || " << inst.symbol << " || " + info;},
+
+            [](const string& name, const execution_report_t& execution_report) {
+                std::cout << "Order Update" << std::endl;
+                std::cout << "id:" << execution_report.clId << std::endl;
+                std::cout << "status" << str_state(execution_report.state) << endl;
+            },
+            "Market_1"
+    );
+    */
 }
+
+#define PUBKEY "5ejVgdkJkgwptewzs5CLYdm6vJxpEL47sErAcnom6i8A"
+#define SECRETKEY "4Vi55eAt4aCfPGrbQKWjESK9UkKvb8AU7jwrzj8ajeA8dbPXEXwB4L1uhkdDEzoZ8bWhJXoRFXcE7aeeve4seARp"
+
+void SERUM_Order_session::setupOpenbook(const std::shared_ptr < IPoolsRequester >& pools, std::shared_ptr < IListener >  trade_channel )
+{
+    SerumMarket* market = new SerumMarket(
+        PUBKEY,
+        SECRETKEY,
+        "https://nd-664-169--151.p2pify.com/a89ccd991de179587a0b8e3356409a9b",
+        _logger,
+        pools,
+        trade_channel,
+        std::bind( &SERUM_Order_session::reportCallback, this, std::placeholders::_1, std::placeholders::_2),
+        "Market_1"
+     );
+    _market = std::shared_ptr<SerumMarket> (market);
+}
+
+void SERUM_Order_session::instrumentCallback(const std::string& name, const marketlib::instrument_descr_t& inst, const std::string& info){ }
+
+void SERUM_Order_session::reportCallback(const std::string& name, const marketlib::execution_report_t& report)
+{
+    /*
+       rt_partial_fill = '1',
+        rt_fill = '2',
+        rt_fill_trade = 'F',
+     */
+    if(report.type == marketlib::rt_partial_fill||report.type == marketlib::rt_fill||report.type == marketlib::rt_fill_trade)
+    {
+        sendExecutionReport(report);
+    }
+    else
+    {
+        sendReport(report);
+    }
+}
+
 
 SERUM_Order_session::~SERUM_Order_session()
 {
@@ -51,14 +116,6 @@ bool SERUM_Order_session::handle_application(const unsigned seqnum, const FIX8::
 bool SERUM_Order_session::handle_logon(const unsigned seqnum, const FIX8::Message *msg)
 {
     _logger->Debug((boost::format("OSession | handle_logon ")).str().c_str());
-   /* try {
-        _logger->Info((boost::format("OSession | Serum DEX start ")).str().c_str());
-        _client->start();
-    }
-    catch(std::exception& ex)
-    {
-        _logger->Error((boost::format("OSession | Serum DEX start exception(%1%)")% ex.what()).str().c_str());
-    }*/
     return FIX8::Session::handle_logon(seqnum, msg);
 }
 
@@ -67,9 +124,6 @@ bool SERUM_Order_session::handle_logout(const unsigned seqnum, const FIX8::Messa
     _logger->Debug((boost::format("OSession | handle_logout ")).str().c_str());
     try {
         _logger->Info((boost::format("OSession | Serum DEX stop ")).str().c_str());
-        //_client->stop();
-        //while(_client->isConnected())
-        //    std::this_thread::sleep_for(std::chrono::milliseconds(200));
         this->stop();
         // _control |= shutdown;
     }
@@ -100,7 +154,9 @@ FIX8::Message *SERUM_Order_session::generate_logon(const unsigned heartbeat_inte
     return logon;
 }
 
-// FIX8::SERUM_Data::FIX8_SERUM_Data_Router implementation
+///////////// FIX8::SERUM_Data::FIX8_SERUM_Data_Router implementation /////////////////
+
+
 bool SERUM_Order_session::operator() (const class FIX8::SERUM_Order::NewOrderSingle *msg) const
 {
     /*
@@ -185,40 +241,25 @@ bool SERUM_Order_session::operator() (const class FIX8::SERUM_Order::NewOrderSin
     }
 
     auto session = const_cast<SERUM_Order_session*>(this);
-    marketlib::instrument_descr_t pool {.engine=TRADE_CONN_NAME,.sec_id=symbol.get(),.symbol=symbol.get()};
+    marketlib::instrument_descr_t pool;// {.engine=TRADE_CONN_NAME,.symbol=symbol.get()};
+    pool.engine = TRADE_CONN_NAME;
+    pool.symbol=symbol.get();
+
     // order validation
-    if(order.clId.empty() || order.owner.empty() || order.secId.empty() || order.currency.empty() || order.original_qty <= 0
+    if(order.clId.empty() || order.owner.empty() ||  order.secId.empty() || order.currency.empty() || order.original_qty <= 0
               ||!(order.type==marketlib::order_type_t::ot_Market||order.type==marketlib::order_type_t::ot_Limit))
     {
-        session->sendReport(order.clId, marketlib::report_type_t::rt_rejected,
-                            marketlib::order_state_t::ost_Rejected,"", "", "wrong input parameters");
+        marketlib::execution_report_t report;
+        report.clId = order.clId;
+        report.type = marketlib::report_type_t::rt_rejected;
+        report.state = marketlib::order_state_t::ost_Rejected;
+        report.text = "wring input parameters;";
+        session->sendReport(report);
         return true;
         //| <-- 8=FIX.4.49=17735=D34=249=Lagrange-fi-client-ord52=20220617-15:18:52.00056=Lagrange-fi-ord1=90874hf7ygf476tgrfgihf874bfjhb11=1000015=USDC38=140=154=155=ETHUSDC60=20220617-15:18:5210=235
     }
 
-    order.exchId = "ex" + order.clId;
-    static int tradeId = 10000;
-    if(order.type==marketlib::order_type_t::ot_Market)
-    {
-        session->sendReport(order.clId, marketlib::report_type_t::rt_new,marketlib::order_state_t::ost_New,order.exchId);
-        std::this_thread::sleep_for(std::chrono::milliseconds(300));
-        session->sendExecutionReport(std::to_string(tradeId++), order.clId, marketlib::report_type_t::rt_fill_trade,
-                                     marketlib::order_state_t::ost_Filled, order.exchId, order.price, order.original_qty);
-    }
-    else if(order.type==marketlib::order_type_t::ot_Limit)
-    {
-        if(_orders.find(order.clId) == _orders.end()) {
-            _orders[order.clId] = order;
-            _logger->Debug((boost::format("OSession | OrderBook Add,  count=%1%") % _orders.size()).str().c_str());
-
-            session->sendReport(order.clId, marketlib::report_type_t::rt_new,marketlib::order_state_t::ost_New,order.exchId);
-        }
-        else {
-            session->sendReport(order.clId, marketlib::report_type_t::rt_rejected,
-                                marketlib::order_state_t::ost_Rejected,"", "", "order client id already exist");
-        }
-    }
-
+    order = _market->send_new_order(pool, order);
     return true;
 }
 
@@ -248,29 +289,30 @@ bool SERUM_Order_session::operator() (const class FIX8::SERUM_Order::OrderCancel
 
     /*
     37 	OrderId 	N 	The unique ID of the order, as returned to the client in the Execution Report in the OrderId field (37).
-  */
-    FIX8::SERUM_Order::OrderID orderId;
+   */
+  /*    FIX8::SERUM_Order::OrderID orderId;
     std::string orderId_str;
     if(msg->get(orderId) && orderId.is_valid()){
         orderId_str = orderId.get();
-    }
+    }*/
 
     /*
    OrigClOrdID 	Y 	The unique ID of the last non-cancelled order assigned by the client.
    */
-    FIX8::SERUM_Order::OrigClOrdID origClOrdID;
+   /* FIX8::SERUM_Order::OrigClOrdID origClOrdID;
     std::string orig_clid_str;
     if(msg->get(origClOrdID) && origClOrdID.is_valid()){
         orig_clid_str = origClOrdID.get();
-    }
-
-    /*
-    55 	Symbol 	Y 	The pool name expressed as CCY1/CCY2. For example, “DOT/USDT”.
-   */
-    /*FIX8::SERUM_Order::Symbol symbol;
-    if(msg->get(symbol) && symbol.is_valid()){
-        order.secId = symbol.get();
     }*/
+
+
+   // 55 	Symbol 	Y 	The pool name expressed as CCY1/CCY2. For example, “DOT/USDT”.
+
+   std::string pair;
+    FIX8::SERUM_Order::Symbol symbol;
+    if(msg->get(symbol) && symbol.is_valid()){
+        pair = symbol.get();
+    }
 
     /*
    54 	Side 	Y 	Supported values:
@@ -296,22 +338,23 @@ bool SERUM_Order_session::operator() (const class FIX8::SERUM_Order::OrderCancel
         order.original_qty = qty.get();
     }*/
 
-    auto session = const_cast<SERUM_Order_session*>(this);
-    auto orderIt = _orders.find(orig_clid_str);
-    if(orderIt != _orders.end()) {
-        session->sendReport(orig_clid_str, marketlib::report_type_t::rt_canceled,
-                            marketlib::order_state_t::ost_Canceled,orderIt->second.exchId);
-        _orders.erase(orderIt);
-        _logger->Debug((boost::format("OSession | OrderBook delete,  count=%1%") % _orders.size()).str().c_str());
+    if(pair.empty() || clid_str.empty())
+    {
+        auto session = const_cast<SERUM_Order_session*>(this);
+        session->sendCancelRejectReport(clid_str,  "wrong input parameters");
+        return true;
     }
-    else {
-        session->sendCancelRejectReport(orig_clid_str, "unknown client id");
-    }
+
+    marketlib::instrument_descr_t pool;
+    pool.engine = TRADE_CONN_NAME;
+    pool.symbol=symbol.get();
+
+    _logger->Debug((boost::format("OSession | Cancelling order %1%") % clid_str).str().c_str());
+    _market->cancel_order(pool, clid_str);
     return true;
 }
 
-void SERUM_Order_session::sendReport(const std::string&clId,marketlib::report_type_t type,marketlib::order_state_t state,
-                const std::string&exchId,  const std::string&origClId, const std::string&text)
+void SERUM_Order_session::sendReport(const marketlib::execution_report_t& report)
 {
     /*
     37 	OrderId 	N 	The unique ID of the order, as returned to the client in the Execution Report in the OrderId field (37).
@@ -321,34 +364,18 @@ void SERUM_Order_session::sendReport(const std::string&clId,marketlib::report_ty
     58 	Text 	N 	Message
  */
     auto *mdr(new FIX8::SERUM_Order::ExecutionReport);
-    *mdr    << new FIX8::SERUM_Order::ClOrdID(clId)
-            << new FIX8::SERUM_Order::OrdStatus(state)
-            << new FIX8::SERUM_Order::ExecType (type);
+    *mdr    << new FIX8::SERUM_Order::ClOrdID(report.clId)
+            << new FIX8::SERUM_Order::OrdStatus(report.state)
+            << new FIX8::SERUM_Order::ExecType (report.type);
 
-    if(!exchId.empty())
-        *mdr    << new FIX8::SERUM_Order::OrderID (exchId);
-    if(!origClId.empty())
-        *mdr    << new FIX8::SERUM_Order::OrigClOrdID (origClId);
-    if(!text.empty())
-        *mdr    << new FIX8::SERUM_Order::Text (text);
+    if(!report.exchId.empty())
+        *mdr    << new FIX8::SERUM_Order::OrderID (report.exchId);
+    //if(!report.origClId.empty())
+    //    *mdr    << new FIX8::SERUM_Order::OrigClOrdID (report.origClId);
+    if(!report.text.empty())
+        *mdr    << new FIX8::SERUM_Order::Text (report.text);
 
-    /*
-    <field name='OrderID' required='N' />
-    <field name='ExecID' required='N' />
-    <field name='Side' required='N' />
-    <field name='LeavesQty' required='N' />
-    <field name='CumQty' required='N' />
-    <field name='AvgPx' required='N' />
-     */
-    // change XML and delete  these  tags
-    *mdr    << new FIX8::SERUM_Order::ExecID ("deleteme");
-    *mdr    << new FIX8::SERUM_Order::Side ('1');
-    *mdr    << new FIX8::SERUM_Order::LeavesQty ("0");
-    *mdr    << new FIX8::SERUM_Order::CumQty ("0");
-    *mdr    << new FIX8::SERUM_Order::AvgPx ("0.1");
-    if(exchId.empty())
-        *mdr    << new FIX8::SERUM_Order::OrderID ("123");
-    _logger->Info((boost::format("OSession | --> %1%, clid(%2%)") % (char)state % clId).str().c_str());
+    _logger->Info((boost::format("OSession | --> %1%, clid(%2%)") % (char)report.state % report.clId).str().c_str());
 
     FIX8::Session::send(mdr);
 }
@@ -395,15 +422,14 @@ void SERUM_Order_session::sendCancelRejectReport( const std::string &clId, const
    <field name='AvgPx' required='N' />
     */
     // change XML and delete  these  tags
-    *mdr    << new FIX8::SERUM_Order::OrderID ("123");
-    *mdr    << new FIX8::SERUM_Order::OrigClOrdID (clId);
+    //*mdr    << new FIX8::SERUM_Order::OrderID ("123");
+    //*mdr    << new FIX8::SERUM_Order::OrigClOrdID (clId);
 
    _logger->Info((boost::format("OSession | --> Cancel_Rejected clid(%1%)") % clId).str().c_str());
     FIX8::Session::send(mdr);
 }
 
-void SERUM_Order_session::sendExecutionReport(const std::string &tradeId, const std::string &clId,
-                marketlib::report_type_t type, marketlib::order_state_t state, const std::string &exchId,double lastPx, double lastShares)
+void SERUM_Order_session::sendExecutionReport(const marketlib::execution_report_t & report)
 {
     /*s
     37 	OrderId 	N 	The unique ID for the order assigned by the server.
@@ -411,8 +437,8 @@ void SERUM_Order_session::sendExecutionReport(const std::string &tradeId, const 
     17 	ExecID 	    N 	The unique ID of the execution.
     150 ExecType 	Y 	The type of execution that was reported.
     39 	OrdStatus 	Y 	The current status of the order.
-    32 	LastQty 	Y 	The quantity bought/sold on this (last) fill. (*) Required if ExecType (150) = Trade (‘F’).
-    31 	LastPx 	    Y 	Price of this (last) fill.
+    32 	LastQty 	N 	The quantity bought/sold on this (last) fill. (*) Required if ExecType (150) = Trade (‘F’).
+    31 	LastPx 	    N 	Price of this (last) fill.
 
     151 LeavesQty 	N 	The quantity remaining to be executed in the order specified in the units of the Currency (15).
     14 	CumQty 	N 	The executed amount of the order specified in the units of the Currency (15).
@@ -424,36 +450,21 @@ void SERUM_Order_session::sendExecutionReport(const std::string &tradeId, const 
     38 	OrderQty 	N 	The Quantity of the order specified in the units of the Currency (15).
     44 	Price 	    N* 	The price of the order.
  */
-
     auto *mdr(new FIX8::SERUM_Order::ExecutionReport);
-    *mdr    << new FIX8::SERUM_Order::ClOrdID(clId)
-            << new FIX8::SERUM_Order::OrdStatus(state)
-            << new FIX8::SERUM_Order::ExecType(type)
-            << new FIX8::SERUM_Order::LastQty(lastShares)
-            << new FIX8::SERUM_Order::LastPx(lastPx);
+    *mdr    << new FIX8::SERUM_Order::ClOrdID(report.clId)
+            << new FIX8::SERUM_Order::OrdStatus(report.state)
+            << new FIX8::SERUM_Order::ExecType(report.type)
+            << new FIX8::SERUM_Order::LastQty(report.lastShares)
+            << new FIX8::SERUM_Order::LastPx(report.lastPx);
 
-    if(!exchId.empty())
-        *mdr    << new FIX8::SERUM_Order::OrderID (exchId);
-    if(!tradeId.empty())
-        *mdr    << new FIX8::SERUM_Order::ExecID (tradeId);
+    if(!report.exchId.empty())
+        *mdr    << new FIX8::SERUM_Order::OrderID (report.exchId);
+    if(!report.tradeId.empty())
+        *mdr    << new FIX8::SERUM_Order::ExecID (report.tradeId);
 
-    /*
-    <field name='OrderID' required='N' />
-   <field name='ExecID' required='N' />
-   <field name='Side' required='N' />
-   <field name='LeavesQty' required='N' />
-   <field name='CumQty' required='N' />
-   <field name='AvgPx' required='N' />
-    */
-    // change XML and delete  these  tags
-    *mdr    << new FIX8::SERUM_Order::Side ('1');
-    *mdr    << new FIX8::SERUM_Order::LeavesQty ("0");
-    *mdr    << new FIX8::SERUM_Order::CumQty ("0");
-    *mdr    << new FIX8::SERUM_Order::AvgPx ("0.1");
-    if(exchId.empty())
-        *mdr    << new FIX8::SERUM_Order::OrderID ("123");
 
-    _logger->Info((boost::format("OSession | --> Trade, clid(%1%), lastPx(%2%), lastShared(%3%)") % clId % lastPx % lastShares).str().c_str());
+
+    _logger->Info((boost::format("OSession | --> Trade, clid(%1%), lastPx(%2%), lastShared(%3%)") % report.clId % report.lastPx % report.lastShares).str().c_str());
     FIX8::Session::send(mdr);
 }
 

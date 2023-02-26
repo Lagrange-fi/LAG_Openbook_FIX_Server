@@ -78,17 +78,18 @@ if (type == "subscribed" || type == "unsubscribed") {
 		}
 		else {
 			addOrderToList(parsed_data, _execution_reports[market]);
-			auto chnls = _channels
-			.get<SubscribeChannelsByMarket>()
-			.equal_range(boost::make_tuple(market));
-			while(chnls.first != chnls.second) {
-				chnls.first->callback(
-					_settings->get(ISettings::Property::ExchangeName),
-					market,
-					*(--_execution_reports[market].end())
-				);
-				++chnls.first;
-			}
+			// auto chnls = _channels
+			// .get<SubscribeChannelsByMarket>()
+			// .equal_range(boost::make_tuple(market));
+			// while(chnls.first != chnls.second) {
+			// 	chnls.first->callback(
+			// 		_settings->get(ISettings::Property::ExchangeName),
+			// 		market,
+			// 		*(--_execution_reports[market].end())
+			// 	);
+			// 	++chnls.first;
+			// }
+			broadcastForMarketSubscribers(market, *(--_execution_reports[market].end()));
 		}
 		
 	} else if (type  == "change") {
@@ -114,17 +115,18 @@ if (type == "subscribed" || type == "unsubscribed") {
 		// report.leavesQty = order->original_qty;
 
 		// application->onReport(settings->get(ISettings::Property::ExchangeName), market, std::move(report));
-		auto chnls = _channels
-			.get<SubscribeChannelsByMarket>()
-			.equal_range(boost::make_tuple(market));
-		while(chnls.first != chnls.second) {
-			chnls.first->callback(
-				_settings->get(ISettings::Property::ExchangeName),
-				market,
-				*order
-			);
-			++chnls.first;
-  		}
+		// auto chnls = _channels
+		// 	.get<SubscribeChannelsByMarket>()
+		// 	.equal_range(boost::make_tuple(market));
+		// while(chnls.first != chnls.second) {
+		// 	chnls.first->callback(
+		// 		_settings->get(ISettings::Property::ExchangeName),
+		// 		market,
+		// 		*order
+		// 	);
+		// 	++chnls.first;
+  		// }
+		broadcastForMarketSubscribers(market, *order);
 	}
 	else if (type == "done") {
 		auto& orders_lst = _execution_reports[market];
@@ -152,44 +154,70 @@ if (type == "subscribed" || type == "unsubscribed") {
 			report.state = is_canceled ? order_state_t::ost_Canceled : order_state_t::ost_Filled;
 			report.side = stringToOrderSide(parsed_data.at("side").as_string().c_str());
 
-			auto chnls = _channels
-			.get<SubscribeChannelsByMarket>()
-			.equal_range(boost::make_tuple(market));
-			while(chnls.first != chnls.second) {
-				chnls.first->callback(
-					_settings->get(ISettings::Property::ExchangeName),
-					market,
-					report
-				);
-				++chnls.first;
-			}
+			// auto chnls = _channels
+			// .get<SubscribeChannelsByMarket>()
+			// .equal_range(boost::make_tuple(market));
+			// while(chnls.first != chnls.second) {
+			// 	chnls.first->callback(
+			// 		_settings->get(ISettings::Property::ExchangeName),
+			// 		market,
+			// 		report
+			// 	);
+			// 	++chnls.first;
+			// }
+			broadcastForMarketSubscribers(market, report);
 			return;
 		}
 		// logger->Info(message.c_str());
 		double remaining = is_canceled ? stod(parsed_data.at("sizeRemaining").as_string().c_str()) : 0;
-		auto report = ExecutionReport();
-		report.clId = order->clId;
-		report.exchId = order->exchId;
-		report.orderType = order->orderType;
-		report.type = is_canceled ? report_type_t::rt_canceled : report_type_t::rt_fill;
-		report.state = is_canceled ? order_state_t::ost_Canceled : order_state_t::ost_Filled;
-		report.side = order->side;
-		report.limitPrice = order->limitPrice;
-		report.leavesQty = order->cumQty - remaining;
-		report.cumQty = remaining;
+		// auto report = ExecutionReport();
+		// report.clId = order->clId;
+		// report.exchId = order->exchId;
+		// report.orderType = order->orderType;
+		// report.type = is_canceled ? report_type_t::rt_canceled : report_type_t::rt_fill;
+		// report.state = is_canceled ? order_state_t::ost_Canceled : order_state_t::ost_Filled;
+		// report.side = order->side;
+		// report.limitPrice = order->limitPrice;
+		// report.leavesQty = order->cumQty - remaining;
+		// report.cumQty = remaining;
 		
-		auto chnls = _channels
+		// auto chnls = _channels
+		// 	.get<SubscribeChannelsByMarket>()
+		// 	.equal_range(boost::make_tuple(market));
+		// while(chnls.first != chnls.second) {
+		// 	chnls.first->callback(
+		// 		_settings->get(ISettings::Property::ExchangeName),
+		// 		market,
+		// 		report
+		// 	);
+		// 	++chnls.first;
+  		// }
+
+		order->type = is_canceled ? report_type_t::rt_canceled : report_type_t::rt_fill;
+		order->state = is_canceled ? order_state_t::ost_Canceled : order_state_t::ost_Filled;
+		order->leavesQty = order->cumQty - remaining;
+		broadcastForMarketSubscribers(market, *order);
+		if (_execution_reports.find(market) != _execution_reports.end()) {
+			orders_lst.erase(order);
+		}
+	}
+}
+
+void SerumTrade::broadcastForMarketSubscribers(const string& market, const ExecutionReport& report) const {
+	auto chnls = _channels
 			.get<SubscribeChannelsByMarket>()
 			.equal_range(boost::make_tuple(market));
-		while(chnls.first != chnls.second) {
-			chnls.first->callback(
-				_settings->get(ISettings::Property::ExchangeName),
-				market,
-				report
-			);
-			++chnls.first;
-  		}
-		orders_lst.erase(order);
+
+	auto next = chnls.first;
+	auto current = chnls.first;
+	while(next != chnls.second) {
+		next++;
+		current->callback(
+			_settings->get(ISettings::Property::ExchangeName),
+			market,
+			report
+		);
+		current = next;
 	}
 }
 

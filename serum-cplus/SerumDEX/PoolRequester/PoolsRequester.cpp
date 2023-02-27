@@ -122,7 +122,7 @@ const PoolsRequester::Instrument& PoolsRequester::getPool(const Instrument& inst
 		if (pool != std::end(_pools.InstrumentsList()))
 			return *pool;
 	}
-	auto name = instrument.base_currency + "/" + instrument.quote_currency;
+	auto name = instrument.symbol;
 
 	auto p = std::find_if(_pools_list.begin(), _pools_list.end(), [&name] (const Instrument& p) {
 		return p.symbol == name;

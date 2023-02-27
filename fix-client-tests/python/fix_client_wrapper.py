@@ -187,7 +187,8 @@ class FixApp(fix.Application):
 
     def cancel(self, instrument, newOrdID, order):
         request = fix44.OrderCancelRequest()
-        request.setField(fix.ClOrdID(order["ClOrdID"]))
+        request.setField(fix.ClOrdID(newOrdID))
+        request.setField(fix.OrigClOrdID(order["ClOrdID"]))
         fix.Session.sendToTarget(request, self.__sessionID)
         pass
 

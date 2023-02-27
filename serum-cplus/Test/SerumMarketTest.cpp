@@ -38,13 +38,13 @@ int main ()
     shared_ptr < IPoolsRequester > pools(new PoolsRequester(logger, settings));
     shared_ptr < IListener >  trade_channel (new SerumTrade ( logger, settings, [&logger](const string& exch, broker_event event, const string& info) {logger->Trace(info.c_str());}));
     trade_channel->start();
-    auto instr = Instrument{
-        engine: "",
-        sec_id: "",
-        symbol: "SOL/USDC",
-        base_currency: "SOL",
-        quote_currency: "USDC"
-    };
+    // auto instr = Instrument{
+    //     engine: "",
+    //     sec_id: "",
+    //     symbol: "SOL/USDC",
+    //     base_currency: "SOL",
+    //     quote_currency: "USDC"
+    // };
 
     auto market = SerumMarket(
         PUBKEY, 
@@ -69,16 +69,16 @@ int main ()
     );
 
     // cout << sizeof(Instruction) << endl;
-    Instrument instrument{"", "", "SOL/USDC", "SOL", "USDC" };
+    Instrument instrument{"", "", "RAY/USDC" };
     order_t order_sell;
-    order_sell.price = 30;
+    order_sell.price = 0.35;
     order_sell.original_qty = 0.1;
     order_sell.side = order_side_t::os_Sell;
     order_sell.clId = "1342";
     // order_sell.exchId = "719423018874672537328158";
 
     order_t order_buy;
-    order_buy.price = 15;
+    order_buy.price = 0.29;
     order_buy.original_qty = 0.1;
     order_buy.side = order_side_t::os_Buy;
     order_buy.clId = "7654321";

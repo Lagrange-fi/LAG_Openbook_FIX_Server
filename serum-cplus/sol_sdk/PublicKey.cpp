@@ -2,7 +2,7 @@
 
 namespace solana
 {
-    PublicKey::PublicKey() : key_str(), key_b(bytes(0))
+    PublicKey::PublicKey() : key_str(), key_b(bytes())
     {}
 
     PublicKey::PublicKey(const string& key) : key_str(key), key_b(_from_base58(key_str))

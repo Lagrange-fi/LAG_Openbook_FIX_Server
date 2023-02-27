@@ -434,12 +434,12 @@
    <field name='AcctIDSource' required='N' />
    <field name='AccountType' required='N' />
    <component name='Parties' required='N' />
-   <component name='Instrument' required='Y' />
+   <component name='Instrument' required='N' />
    <component name='FinancingDetails' required='N' />
    <component name='UndInstrmtGrp' required='N' />
-   <field name='Side' required='Y' />
-   <field name='TransactTime' required='Y' />
-   <component name='OrderQtyData' required='Y' />
+   <field name='Side' required='N' />
+   <field name='TransactTime' required='N' />
+   <component name='OrderQtyData' required='N' />
    <field name='ComplianceID' required='N' />
    <field name='Text' required='N' />
    <field name='EncodedTextLen' required='N' />
@@ -1005,7 +1005,6 @@
    <component name='InstrmtStrkPxGrp' required='Y' />
    <component name='UndInstrmtStrkPxGrp' required='N' />
   </message>
-  <message name='XMLnonFIX' msgtype='n' msgcat='admin' />
   <message name='RegistrationInstructions' msgtype='o' msgcat='app'>
    <field name='RegistID' required='Y' />
    <field name='RegistTransType' required='Y' />

@@ -204,7 +204,7 @@ bool SERUM_Order_sandbox_session::operator() (const class FIX8::SERUM_Order::New
         session->sendReport(order.clId, marketlib::report_type_t::rt_new,marketlib::order_state_t::ost_New,order.exchId);
         std::this_thread::sleep_for(std::chrono::milliseconds(300));
         session->sendExecutionReport(std::to_string(tradeId++), order.clId, marketlib::report_type_t::rt_fill_trade,
-                                     marketlib::order_state_t::ost_Filled, order.exchId, order.price, order.original_qty);
+                                     marketlib::order_state_t::ost_Filled, order.exchId, 12345, order.original_qty);
     }
     else if(order.type==marketlib::order_type_t::ot_Limit)
     {
@@ -328,8 +328,6 @@ void SERUM_Order_sandbox_session::sendReport(const std::string&clId,marketlib::r
 
     if(!exchId.empty())
         *mdr    << new FIX8::SERUM_Order::OrderID (exchId);
-    if(!origClId.empty())
-        *mdr    << new FIX8::SERUM_Order::OrigClOrdID (origClId);
     if(!text.empty())
         *mdr    << new FIX8::SERUM_Order::Text (text);
 
@@ -342,13 +340,13 @@ void SERUM_Order_sandbox_session::sendReport(const std::string&clId,marketlib::r
     <field name='AvgPx' required='N' />
      */
     // change XML and delete  these  tags
-    *mdr    << new FIX8::SERUM_Order::ExecID ("deleteme");
-    *mdr    << new FIX8::SERUM_Order::Side ('1');
-    *mdr    << new FIX8::SERUM_Order::LeavesQty ("0");
-    *mdr    << new FIX8::SERUM_Order::CumQty ("0");
-    *mdr    << new FIX8::SERUM_Order::AvgPx ("0.1");
-    if(exchId.empty())
-        *mdr    << new FIX8::SERUM_Order::OrderID ("123");
+    //*mdr    << new FIX8::SERUM_Order::ExecID ("deleteme");
+    //*mdr    << new FIX8::SERUM_Order::Side ('1');
+    //*mdr    << new FIX8::SERUM_Order::LeavesQty ("0");
+    //*mdr    << new FIX8::SERUM_Order::CumQty ("0");
+    //*mdr    << new FIX8::SERUM_Order::AvgPx ("0.1");
+    //if(exchId.empty())
+    //    *mdr    << new FIX8::SERUM_Order::OrderID (exchId);
     _logger->Info((boost::format("OSession | --> %1%, clid(%2%)") % (char)state % clId).str().c_str());
 
     FIX8::Session::send(mdr);
@@ -386,18 +384,6 @@ void SERUM_Order_sandbox_session::sendCancelRejectReport( const std::string &clI
     *mdr    << new FIX8::SERUM_Order::CxlRejResponseTo (FIX8::SERUM_Order::CxlRejResponseTo_ORDER_CANCEL_REQUEST);
     if(!text.empty())
         *mdr    << new FIX8::SERUM_Order::Text (text);
-
-    /*
-    <field name='OrderID' required='N' />
-   <field name='ExecID' required='N' />
-   <field name='Side' required='N' />
-   <field name='LeavesQty' required='N' />
-   <field name='CumQty' required='N' />
-   <field name='AvgPx' required='N' />
-    */
-    // change XML and delete  these  tags
-    *mdr    << new FIX8::SERUM_Order::OrderID ("123");
-    *mdr    << new FIX8::SERUM_Order::OrigClOrdID (clId);
 
    _logger->Info((boost::format("OSession | --> Cancel_Rejected clid(%1%)") % clId).str().c_str());
     FIX8::Session::send(mdr);

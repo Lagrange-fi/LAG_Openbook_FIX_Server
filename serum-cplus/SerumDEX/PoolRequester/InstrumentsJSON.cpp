@@ -30,7 +30,7 @@ bool InstrumentsJson::DeserializeFromFile(const std::string& path)
     }
     in.close();  
 
-    Deserialize(result);
+    return Deserialize(result);
 }
 
 bool InstrumentsJson::Serialize(rapidjson::Writer<rapidjson::StringBuffer>* writer) const

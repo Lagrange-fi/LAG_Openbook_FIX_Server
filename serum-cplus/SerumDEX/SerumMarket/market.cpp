@@ -9,12 +9,6 @@ _pools(pools), _trade_channel(listener), _message_count(0), _orders_callback(ord
 _order_count_for_symbol(), _name(market_id)
 {}
 
-// SerumMarket::SerumMarket(const SerumMarket& other): 
-// _pubkey(other._pubkey), _secretkey(other._secretkey), _http_address(other._http_address), 
-// _pools(other._pools), _callback(other._callback), _message_count(0), _orders_callback(other._orders_callback),
-// _order_count_for_symbol(), _name(other._name)
-// {}
-
 SerumMarket::~SerumMarket()
 {
     // _mint_addresses.clear();
@@ -32,6 +26,23 @@ SerumMarket::Order SerumMarket::send_new_order(const Instrument& instrument_, co
     try {
         market_info = get_market_info(instrument_, _pubkey);
         orders_account_info = get_orders_account_info(market_info.instr, _pubkey);
+
+        // if (orders_account_info.account.size() == 0) {
+        //     auto balance_needed = get_balance_needed();
+        //     auto new_open_order_account = Keypair();
+        //     signers.push_back(new_open_order_account);
+        //     txn.add_instruction(
+        //         create_account(
+        //             CreateAccountParams{
+        //                 owner: _pubkey,
+        //                 new_account: new_open_order_account.get_pubkey(),
+        //                 lamports: balance_needed,
+        //                 program_id: market_info.instr.address
+        //             }
+        //         )
+        //     );
+        //     orders_account_info.account = new_open_order_account.get_pubkey();
+        // }
 
         if (order_.side == marketlib::order_side_t::os_Buy && market_info.payer_buy.get_str_key().empty()) {
             auto payer_buy = get_token_account_by_owner(_pubkey.get_str_key(), market_info.instr.quote_mint_address);
@@ -327,7 +338,11 @@ OpenOrdersAccountInfo SerumMarket::get_orders_account_info(const Instrument& ins
     );
 
     if (orders_accounts_info.empty() || boost::json::parse(orders_accounts_info).at("result").as_array().empty())
-        throw -1;
+        return OpenOrdersAccountInfo{
+            account: PublicKey(),
+            base_token_free: 0,
+            quote_token_free: 0
+        };
 
     auto decoded = base64_decode(string(boost::json::parse(orders_accounts_info)
         .at("result")
@@ -439,6 +454,25 @@ Instruction SerumMarket::create_account(const CreateAccountParams& params_) cons
     instruction.set_data(&ord_layout, sizeof(InstructionLayoutCreateOrder));
     return instruction;
 }
+
+// Instruction SerumMarket::create_open_orders_account(const CreateOOAccountParams& params_) const
+// {
+//     Instruction instruction;
+//     instruction.set_account_id(params_.program_id);
+//     instruction.set_accounts( Instruction::AccountMetas({
+//         Instruction::AccountMeta { pubkey: params_.owner, is_writable: true, is_signer: true },
+//         Instruction::AccountMeta { pubkey: params_.new_account, is_writable: true, is_signer: true }
+//     }));
+
+//     auto ord_layout = InstructionLayoutCreateOrder {
+//         0,
+//         params_.lamports,
+//         ACCOUNT_LEN
+//     };
+//     memcpy(ord_layout.owner, TOKEN_PROGRAM_ID.data(), SIZE_PUBKEY);
+//     instruction.set_data(&ord_layout, sizeof(InstructionLayoutCreateOrder));
+//     return instruction;
+// }
 
 Instruction SerumMarket::initialize_account(const InitializeAccountParams& params_) const
 {

@@ -12,20 +12,20 @@ void SerumTrade::onOpen() {
 #ifdef SERUM_LISTENER_DEBUG
 _logger->Debug("> SerumTrade::onOpen");
 #endif
-	_onEvent(getName(), broker_event::session_logon, "TradeLogon: " + getName());
+	_onEvent(getName(), "", broker_event::session_logon, "TradeLogon: " + getName());
 }
 void SerumTrade::onClose() {
 #ifdef SERUM_LISTENER_DEBUG
 	_logger->Debug("> SerumTrade::onClose");
 #endif
-	_onEvent(getName(), broker_event::session_logout, "TradeLogout: " + getName());
+	_onEvent(getName(), "", broker_event::session_logout, "TradeLogout: " + getName());
 	clearMarkets();
 }
 void SerumTrade::onFail() {
 #ifdef SERUM_LISTENER_DEBUG
 _logger->Debug("> SerumTrade::onFail");
 #endif
-	_onEvent(getName(), broker_event::session_logout, "TradeLogout: " + getName());
+	_onEvent(getName(), "", broker_event::session_logout, "TradeLogout: " + getName());
 	clearMarkets();
 }
 void SerumTrade::onMessage(const string& message) {
@@ -43,12 +43,40 @@ void SerumTrade::onEventHandler(const string &message) {
 	auto parsed_data = boost::json::parse(message);
 	std::string type = parsed_data.at("type").as_string().c_str();
 #ifdef SERUM_LISTENER_DEBUG
-if (type == "subscribed" || type == "unsubscribed") {
-	_logger->Debug(message.c_str());
-} 
+	if (type == "subscribed" || type == "unsubscribed") {
+		_logger->Debug(message.c_str());
+	} 
 #endif
 	if (type == "subscribed" || type == "unsubscribed")
 		return;
+	else if (type == "error") {
+		_logger->Error(message.c_str());
+		if (message.find("Invalid market name provided") != string::npos) {
+			auto s1 = message.find("'")+1;
+			auto symbol = message.substr( s1, message.find("'", s1) - s1);
+			_onEvent(
+					getName(),
+					symbol,
+					marketlib::broker_event::subscribed_coin_is_not_valid, 
+					(boost::format(R"(Subscription to %1% is not supported by %2%)") % symbol % getName()).str()
+				);
+
+			auto chnls = _channels
+				.get<SubscribeChannelsByMarket>()
+				.equal_range(boost::make_tuple(symbol));
+			list<string> client_ids;
+			for( auto chnl = chnls.first, end = chnls.second; chnl != end; ++chnl )
+				client_ids.push_back(chnl->clientId);	
+			for (const auto& a: client_ids)
+				_channels.erase(
+						_channels
+						.get<SubscribeChannelsByClientAndMarket>()
+						.find(boost::make_tuple(
+							a,
+							symbol )));
+		}
+		return;
+	}
 	std::string market = parsed_data.at("market").as_string().c_str();
 	if (type  == "l3snapshot" || type  == "open") {
 		auto addOrderToList = [&](const boost::json::value& set, std::list<ExecutionReport>& vec) {
@@ -61,7 +89,7 @@ if (type == "subscribed" || type == "unsubscribed") {
             order.limitPrice= stod(set.at("price").as_string().c_str());
             order.side= stringToOrderSide(set.at("side").as_string().c_str());
             order.state= order_state_t::ost_New;
-            order.tif= time_in_force_t::tf_Undefined;
+			order.type= report_type_t::rt_new;
             order.orderType= order_type_t::ot_Limit;
             vec.push_back(order);
 		};
@@ -78,17 +106,6 @@ if (type == "subscribed" || type == "unsubscribed") {
 		}
 		else {
 			addOrderToList(parsed_data, _execution_reports[market]);
-			// auto chnls = _channels
-			// .get<SubscribeChannelsByMarket>()
-			// .equal_range(boost::make_tuple(market));
-			// while(chnls.first != chnls.second) {
-			// 	chnls.first->callback(
-			// 		_settings->get(ISettings::Property::ExchangeName),
-			// 		market,
-			// 		*(--_execution_reports[market].end())
-			// 	);
-			// 	++chnls.first;
-			// }
 			broadcastForMarketSubscribers(market, *(--_execution_reports[market].end()));
 		}
 		
@@ -102,31 +119,22 @@ if (type == "subscribed" || type == "unsubscribed") {
 		order->cumQty = stod(parsed_data.at("size").as_string().c_str());
 		order->leavesQty = stod(parsed_data.at("size").as_string().c_str());
 		order->limitPrice = stod(parsed_data.at("price").as_string().c_str());
-		// order->clId = strtoull(parsed_data.at("clientId").as_string().c_str(), nullptr, 0);
-
-		// auto report = ExecutionReport();
-		// report.clId = order->clId;
-		// report.exchId = order->exchId;
-		// report.orderType = order->type;
-		// report.type = report_type_t::rt_replaced;
-		// report.state = order->state;
-		// report.side = order->side;
-		// report.limitPrice = order->price;
-		// report.leavesQty = order->original_qty;
-
-		// application->onReport(settings->get(ISettings::Property::ExchangeName), market, std::move(report));
-		// auto chnls = _channels
-		// 	.get<SubscribeChannelsByMarket>()
-		// 	.equal_range(boost::make_tuple(market));
-		// while(chnls.first != chnls.second) {
-		// 	chnls.first->callback(
-		// 		_settings->get(ISettings::Property::ExchangeName),
-		// 		market,
-		// 		*order
-		// 	);
-		// 	++chnls.first;
-  		// }
+		order->state= order_state_t::ost_Replaced;
+		order->type= report_type_t::rt_replaced;
 		broadcastForMarketSubscribers(market, *order);
+	} 
+	else if (type  == "fill") {
+		auto& orders_lst = _execution_reports[market];
+		auto exch_id = parsed_data.at("orderId").as_string().c_str();
+		auto order = find_if(orders_lst.begin(), orders_lst.end(), [exch_id](auto a) {
+			return a.exchId == exch_id;
+		});
+
+		order->state = order_state_t::ost_Filled;
+		order->type = report_type_t::rt_fill_trade;
+		order->lastShares = stod(parsed_data.at("size").as_string().c_str());
+		order->leavesQty = 0;
+		order->lastPx = stod(parsed_data.at("price").as_string().c_str());
 	}
 	else if (type == "done") {
 		auto& orders_lst = _execution_reports[market];
@@ -134,13 +142,6 @@ if (type == "subscribed" || type == "unsubscribed") {
 		auto order = find_if(orders_lst.begin(), orders_lst.end(), [exch_id](auto a) {
 			return a.exchId == exch_id;
 		});
-		// order = find_if(
-		// 	orders_lst.begin(), 
-		// 	orders_lst.end(), 
-		// 	[id = parsed_data.at("orderId").as_string().c_str()](auto a) {
-		// 		return a.exchId == id;
-		// 	}
-		// );
 
 		/*"done" can be pushed for orders that were never open in the order book 
 		in the first place (ImmediateOrCancel orders for example)*/
@@ -149,53 +150,25 @@ if (type == "subscribed" || type == "unsubscribed") {
 			auto report = ExecutionReport();
 			report.clId = parsed_data.at("clientId").as_string().c_str();
 			report.exchId = exch_id;
-			report.orderType = order_type_t::ot_Market;
-			report.type = is_canceled ? report_type_t::rt_canceled : report_type_t::rt_fill;
+			report.orderType = order_type_t::ot_Limit;
+			report.type = is_canceled ? report_type_t::rt_canceled : report_type_t::rt_fill_trade;
 			report.state = is_canceled ? order_state_t::ost_Canceled : order_state_t::ost_Filled;
+			report.lastShares = 0;
+			report.lastPx = 0;
 			report.side = stringToOrderSide(parsed_data.at("side").as_string().c_str());
 
-			// auto chnls = _channels
-			// .get<SubscribeChannelsByMarket>()
-			// .equal_range(boost::make_tuple(market));
-			// while(chnls.first != chnls.second) {
-			// 	chnls.first->callback(
-			// 		_settings->get(ISettings::Property::ExchangeName),
-			// 		market,
-			// 		report
-			// 	);
-			// 	++chnls.first;
-			// }
 			broadcastForMarketSubscribers(market, report);
 			return;
 		}
 		// logger->Info(message.c_str());
-		double remaining = is_canceled ? stod(parsed_data.at("sizeRemaining").as_string().c_str()) : 0;
-		// auto report = ExecutionReport();
-		// report.clId = order->clId;
-		// report.exchId = order->exchId;
-		// report.orderType = order->orderType;
-		// report.type = is_canceled ? report_type_t::rt_canceled : report_type_t::rt_fill;
-		// report.state = is_canceled ? order_state_t::ost_Canceled : order_state_t::ost_Filled;
-		// report.side = order->side;
-		// report.limitPrice = order->limitPrice;
-		// report.leavesQty = order->cumQty - remaining;
-		// report.cumQty = remaining;
-		
-		// auto chnls = _channels
-		// 	.get<SubscribeChannelsByMarket>()
-		// 	.equal_range(boost::make_tuple(market));
-		// while(chnls.first != chnls.second) {
-		// 	chnls.first->callback(
-		// 		_settings->get(ISettings::Property::ExchangeName),
-		// 		market,
-		// 		report
-		// 	);
-		// 	++chnls.first;
-  		// }
+		// double remaining = is_canceled ? stod(parsed_data.at("sizeRemaining").as_string().c_str()) : 0;
 
-		order->type = is_canceled ? report_type_t::rt_canceled : report_type_t::rt_fill;
+		order->type = is_canceled ? report_type_t::rt_canceled : report_type_t::rt_fill_trade;
 		order->state = is_canceled ? order_state_t::ost_Canceled : order_state_t::ost_Filled;
-		order->leavesQty = order->cumQty - remaining;
+		if (is_canceled) 
+			order->leavesQty = stod(parsed_data.at("sizeRemaining").as_string().c_str());
+		else
+			order->leavesQty = 0;
 		broadcastForMarketSubscribers(market, *order);
 		if (_execution_reports.find(market) != _execution_reports.end()) {
 			orders_lst.erase(order);
@@ -213,7 +186,7 @@ void SerumTrade::broadcastForMarketSubscribers(const string& market, const Execu
 	while(next != chnls.second) {
 		next++;
 		current->callback(
-			_settings->get(ISettings::Property::ExchangeName),
+			getName(),
 			market,
 			report
 		);

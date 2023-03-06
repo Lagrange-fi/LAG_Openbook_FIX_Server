@@ -93,6 +93,17 @@ namespace marketlib
         double          cumQty;
         double          lastShares ;
         std::string     text;
+
+        execution_report_t(){}
+        execution_report_t(const std::string  & _clId, order_state_t  _state, report_type_t  _type):
+            clId(_clId), state(_state), type(_type)
+        {
+        }
+        //  special for rejected reports
+        execution_report_t(const std::string  & _clId, order_state_t  _state, report_type_t  _type, const std::string& _text):
+                clId(_clId), state(_state), type(_type), text(_text)
+        {
+        }
     };
 
     struct order_t

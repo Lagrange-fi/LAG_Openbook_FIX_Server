@@ -36,7 +36,7 @@ private:
 	typedef marketlib::market_depth_t SubscriptionModel;
 	typedef marketlib::instrument_descr_t instrument;
 	typedef std::function <void(const string&, const string&, const std::any&)> callback_subscribed_channel;
-	typedef std::function <void(const string &exchangeName, marketlib::broker_event, const string &details)> callback_on_event;
+	typedef std::function <void(const string &exchangeName, const string& symbol, marketlib::broker_event, const std::any &details)> callback_on_event;
 
 protected:
 
@@ -55,9 +55,7 @@ protected:
 	callback_on_event _onEvent;
 	ConnectionWrapper < SerumMD > _connection;
 	depth_snapshots _depth_snapshot;
-	top_snapshots _top_snapshot;
-	string _name;
-	
+	top_snapshots _top_snapshot;	
 
 	void onOpen();
 	void onClose();

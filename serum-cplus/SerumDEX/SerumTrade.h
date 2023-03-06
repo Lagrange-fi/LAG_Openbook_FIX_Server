@@ -32,7 +32,7 @@ private:
 	typedef std::map < string, std::list< ExecutionReport > > execution_reports_map;
 	typedef marketlib::instrument_descr_t Instrument;
 	typedef std::function <void(const string&, const string&, const ExecutionReport&)> callback_t;
-	typedef std::function <void(const string &exchangeName, marketlib::broker_event, const string &details)> callback_on_event;
+	typedef std::function <void(const string &exchangeName, const string &symbol, marketlib::broker_event, const std::any &details)> callback_on_event;
 
 protected:
 	logger_ptr _logger;

@@ -36,7 +36,7 @@ int main ()
     shared_ptr < ILogger > logger(new Logger);
     shared_ptr < ISettings > settings(new SerumSettings);
     shared_ptr < IPoolsRequester > pools(new PoolsRequester(logger, settings));
-    shared_ptr < IListener >  trade_channel (new SerumTrade ( logger, settings, [&logger](const string& exch, broker_event event, const string& info) {logger->Trace(info.c_str());}));
+    shared_ptr < IListener >  trade_channel (new SerumTrade ( logger, settings, [&logger](const string& exch, const string& synbol, broker_event event, const any& info) {logger->Trace(any_cast<string>(info).c_str());}));
     trade_channel->start();
     // auto instr = Instrument{
     //     engine: "",
@@ -63,18 +63,20 @@ int main ()
             << execution_report.exchId << endl
             << execution_report.secId << endl
             << execution_report.transaction_hash << endl
-            << str_state(execution_report.state) << endl;
+            << str_state(execution_report.state) << endl
+            << execution_report.text << endl;
         },
         "Market_1"
     );
 
     // cout << sizeof(Instruction) << endl;
-    Instrument instrument{"", "", "RAY/USDC" };
+    Instrument instrument{"", "", "R/USDC" };
     order_t order_sell;
     order_sell.price = 0.35;
     order_sell.original_qty = 0.1;
     order_sell.side = order_side_t::os_Sell;
     order_sell.clId = "1342";
+    // order_sell.type = order_type_t::ot_Limit;
     // order_sell.exchId = "719423018874672537328158";
 
     order_t order_buy;
@@ -82,6 +84,7 @@ int main ()
     order_buy.original_qty = 0.1;
     order_buy.side = order_side_t::os_Buy;
     order_buy.clId = "7654321";
+    order_buy.type = order_type_t::ot_Limit;
 
     while (1)
     {

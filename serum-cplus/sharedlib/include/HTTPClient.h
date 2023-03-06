@@ -3,6 +3,7 @@
 #include <string>
 #include <curl/curl.h>
 #include <iostream>
+#include <boost/format.hpp>
 // #include <cppcodec/base64_rfc4648.hpp>
 
 class HttpClient 
@@ -43,14 +44,14 @@ public:
             
             result = curl_easy_perform(curl);
             if (result != CURLE_OK) {
-                throw std::exception();
+                throw std::string((boost::format(R"(Endpoint %1% request failed: %2%)") % target % response).str());
                 response.clear();
             }
             curl_easy_cleanup(curl);
         } 
         else {
             // logger->Error("curl_easy_init error");
-            throw std::exception();
+            throw std::string("curl_easy_init error");
         }
         return response;
     }

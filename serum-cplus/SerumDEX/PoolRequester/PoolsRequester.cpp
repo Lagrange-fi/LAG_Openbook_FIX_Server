@@ -14,38 +14,19 @@ PoolsRequester::PoolsRequester(logger_ptr logger, settings_ptr settings, std::st
 }
 
 void PoolsRequester::loadPoolList()
-{
-	CURL *curl;
-	CURLcode result;
+{	
 	string response;
-	curl_global_init(CURL_GLOBAL_DEFAULT);
 	try{
-		curl = curl_easy_init();
-		if (curl) {
-
-			curl_easy_setopt(curl, CURLOPT_URL, "https://openserum.io/api/serum/markets.json");
-			curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeCallback);
-			curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
-
-			result = curl_easy_perform(curl);
-			// Error check
-			if (result != CURLE_OK) {
-				_logger->Error("curl_easy_perform() error: ");
-				response.clear();
-				throw ;
-			}
-
-			curl_easy_cleanup(curl);
-		} else {
-			_logger->Error("curl_easy_init() error");
-			throw ;
-		}
+		response = HttpClient::request(
+			"", 
+			"https://openserum.io/api/serum/markets.json",
+			HttpClient::HTTPMethod::GET
+		);
 	}
-	catch(int e) {
-		// _pools_list = std::list< Pool >();
+	catch (string e){
+		throw string("PoolsRequester::" + e);
 	}
 
-	// _pools_list = std::list< Pool >();
 	auto parsed_data = boost::json::parse(response);
 	for( auto pool : parsed_data.as_array()) {
 		string symbol = AS_STR(pool.at("name"));
@@ -64,35 +45,17 @@ void PoolsRequester::loadPoolList()
 
 PoolsRequester::Instrument PoolsRequester::getPoolInfoFromServer(const Instrument& pool_info)
 {
-	CURL *curl;
-	CURLcode result;
 	string response;
-	curl_global_init(CURL_GLOBAL_DEFAULT);
 	string url = "https://openserum.io/api/serum/market/" + pool_info.address;
 	try{
-		curl = curl_easy_init();
-		if (curl) {
-
-			curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-			curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeCallback);
-			curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
-
-			result = curl_easy_perform(curl);
-			// Error check
-			if (result != CURLE_OK) {
-				_logger->Error("curl_easy_perform() error");
-				response.clear();
-				throw ;
-			}
-
-			curl_easy_cleanup(curl);
-		} else {
-			_logger->Error("curl_easy_init() error");
-			throw ;
-		}
+		response = HttpClient::request(
+			"", 
+			url,
+			HttpClient::HTTPMethod::GET
+		);
 	}
-	catch(int e) {
-		// _pools_list = std::list< Pool >();
+	catch (string e){
+		throw string("PoolsRequester::" + e);
 	}
 
 	auto parsed_data = boost::json::parse(response);
@@ -129,7 +92,7 @@ const PoolsRequester::Instrument& PoolsRequester::getPool(const Instrument& inst
 	});
 
 	if (p == std::end(_pools_list))
-		throw "Pool is not enabled";
+		throw std::string("Pool is not enabled");
 	
 	auto new_pool = getPoolInfoFromServer(*p);
 	_pools.PushBackInstrument(new_pool);

@@ -46,11 +46,20 @@ class Client:
     def on_instruments(self, broker, pools):
         self.pools = self.pools + pools
 
-    def subscribePools(self, count):
+    def subscribePools(self, count, book):
         i = 0
         for pool in self.pools:
             print("POOL {}: {}, Currency: {}".format(pool['SecurityExchange'], pool['Symbol'], pool['Currency']))
-            self.price_application.subscribe(pool, True, False)
+            self.price_application.subscribe(pool, True, book)
+            i = i + 1
+            if i > count:
+                break
+
+    def unsubscribePools(self, count, book):
+        i = 0
+        for pool in self.pools:
+            print("POOL {}: {}, Currency: {}".format(pool['SecurityExchange'], pool['Symbol'], pool['Currency']))
+            self.price_application.subscribe(pool, False, book)
             i = i + 1
             if i > count:
                 break
@@ -65,8 +74,14 @@ if __name__ == '__main__':
         message = ''
         while True:
             message = input('enter e to exit the app\n')
-            if message == 's':
-                logic.subscribePools(50)
+            if message == 'st':
+                logic.subscribePools(50, False)
+            if message == 'ut':
+                logic.unsubscribePools(50, False)
+            if message == 'sb':
+                logic.subscribePools(50, True)
+            if message == 'ub':
+                logic.unsubscribePools(50, True)
             if message == 'e':
                 break
 

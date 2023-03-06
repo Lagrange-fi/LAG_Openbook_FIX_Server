@@ -32,8 +32,6 @@ public :
     virtual ~SERUM_Order_session();
 
     void setupOpenbook(const std::shared_ptr < IPoolsRequester >& pools, std::shared_ptr < IListener >  trade_channel );
-
-    void instrumentCallback(const std::string& name, const marketlib::instrument_descr_t& inst, const std::string& info);
     void reportCallback(const std::string& name, const marketlib::execution_report_t& execution_report);
 
 private:

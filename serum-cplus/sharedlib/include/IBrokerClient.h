@@ -58,6 +58,13 @@ public:
                     SubscribeChannel,
 					boost::multi_index::member<SubscribeChannel, decltype(SubscribeChannel::clientId), &SubscribeChannel::clientId >
                 >
+            >,
+			boost::multi_index::hashed_non_unique<
+                boost::multi_index::tag<struct SubscribeChannelsByMarket>,
+                boost::multi_index::composite_key<
+                    SubscribeChannel,
+					boost::multi_index::member<SubscribeChannel, decltype(SubscribeChannel::market), &SubscribeChannel::market >
+                >
             >
         >
     >;

@@ -19,10 +19,12 @@ int main () {
     SerumTrade client(
         logger,
         settings,
-        [&logger](const string& exch, broker_event event, const string& info) {}
+        [&logger](const string& exch, const string& symbol, broker_event event, const any& info) {
+            // cout << event << " " << info << endl;
+        }
     );
 
-    Instrument instrument{"", "", "SOL/USDC", "SOL", "USDC" };
+    Instrument instrument{"", "", "SOL/USDC" };
 
     client.start();
     
@@ -40,6 +42,8 @@ int main () {
         } else if (cmd == "lst") {
             client.listen(instrument, "Cli_1", [&logger](const string& exch, const string& id, const execution_report_t& report) 
             {
+                if (report.state == order_state_t::ost_New || report.state == order_state_t::ost_Canceled)
+                    return;
                 logger->Info("Cli_1");
                 logger->Info(formatExecutionReport(exch, id, report).c_str());
             });

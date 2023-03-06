@@ -90,7 +90,6 @@ string formatExecutionReport(const string& exchangeName, const string &symbol, c
         state = "replaced";
     }
 
-
     return (boost::format("Symbol(%1%)\nType(%2%)\nSide(%3%)\nPrice(%4%)\nAmountExecuted(%5%)\nAmountRemaining(%6%)\nStatus(%7%)\nExchId(%8%)\nCliId(%9%)\n\n") 
         % symbol
         % (report.orderType == order_type_t::ot_Limit ? "limit" : "market")

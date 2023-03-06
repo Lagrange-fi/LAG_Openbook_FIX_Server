@@ -64,11 +64,12 @@ int main(int argc, char **argv) {
         std::shared_ptr < ISettings > settings (new SerumSettings);
         std::shared_ptr < IBrokerClient > serumClient( std::shared_ptr <IBrokerClient>(
                 new SerumMD(logger,settings, std::make_shared< PoolsRequester >( logger, settings ),
-                            [](const std::string &exchangeName, marketlib::broker_event, const std::string &details) {}))
+                            [](const std::string &exchangeName, const std::string& symbol, marketlib::broker_event, const std::any &details) {}))
         );
 
         std::shared_ptr < IPoolsRequester > pools(new PoolsRequester(logger, settings, "./market_ord.json"));
-        std::shared_ptr < IListener >  trade_channel (new SerumTrade ( logger, settings, [&logger](const std::string& exch, marketlib::broker_event event, const std::string& info) {logger->Trace(info.c_str());}));
+        std::shared_ptr < IListener >  trade_channel (new SerumTrade ( logger, settings, 
+        [&logger](const std::string& exch, const std::string &symbol, marketlib::broker_event event, const std::any& info) {logger->Trace(std::any_cast<std::string>(info).c_str());}));
         if(order_part)
         {
             try {

@@ -6,7 +6,7 @@
 #include <sharedlib/include/ILogger.h>
 #include <sharedlib/include/ISettings.h>
 #include <marketlib/include/market.h>
-
+#include <sharedlib/include/HTTPClient.h>
 
 class PoolsRequester : public IPoolsRequester
 {

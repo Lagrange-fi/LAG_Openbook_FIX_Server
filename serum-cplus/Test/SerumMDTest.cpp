@@ -25,10 +25,12 @@ int main () {
         logger,
         settings,
         pools,
-        [&logger](const string& exch, broker_event event, const string& info) {}
+        [&logger](const string& exch, const string& symbol, broker_event event, const any& info) {
+            // cout << event << " " << info << endl;
+        }
     );
 
-    Instrument instrument{"", "", "ETH/USDC", "ETH", "USDC" };
+    Instrument instrument{"", "", "SOL/USDC" };
 
     client.start();
     
@@ -47,6 +49,11 @@ int main () {
             client.subscribe(instrument, market_depth_t::top, "Cli_1",  [&logger](const string& exch, const string& symbol, const std::any& data)
             {
                 logger->Info("Cli_1");
+                logger->Info(formatTopInfo(exch, symbol, std::any_cast<BrokerModels::MarketBook>(data)).c_str());
+            });
+            client.subscribe(instrument, market_depth_t::top, "Cli_2", [&logger](const string& exch, const string& symbol, const std::any& data)
+            {
+                logger->Info("Cli_2");
                 logger->Info(formatTopInfo(exch, symbol, std::any_cast<BrokerModels::MarketBook>(data)).c_str());
             });
         } else if (cmd == "ut") {

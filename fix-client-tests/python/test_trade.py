@@ -1,3 +1,4 @@
+
 import random
 import time
 import quickfix as fix
@@ -19,15 +20,15 @@ class Client:
         self.application.report_func = self.on_report
         self.application.report_reject_func = self.on_cancel_reject
         self.instrument = {
-            'First': "ETH",
+            'First': "SOL",
             'Second': "USDC",
-            'Symbol': "ETHUSDC",
-            'SecurityID': "ETHUSDC",
+            'Symbol': "SOL/USDC",
+            'SecurityID': "SOL/USDC",
             'SecurityType': "COIN",
             'SecurityExchange': "Serum",
             'Currency': "USDC"
         }
-        self.clId = 10000
+        self.clId = random.randrange(99999)
         self.order = {}
 
     def on_event(self, data):
@@ -54,7 +55,7 @@ class Client:
             'Account': "90874hf7ygf476tgrfgihf874bfjhb",
             'ClOrdID': str(self.clId),
             'Side': Side.Buy,
-            'OrderQty': 1,
+            'OrderQty': 0.1,
             'OrdType': OrderType.Market,
         }
         self.application.send(self.instrument, self.order)
@@ -65,11 +66,25 @@ class Client:
             'Account': "90874hf7ygf476tgrfgihf874bfjhb",
             'ClOrdID': str(self.clId),
             'Side': Side.Buy,
-            'OrderQty': 1,
+            'OrderQty': 0.1,
             'OrdType': OrderType.Limit,
-            'Price': 1050,
+            'Price': 10,
             'TimeInForce': TimeInForce.GoodTillCancel,
         }
+        self.application.send(self.instrument, self.order)
+        self.clId = self.clId + 1
+
+    def send_limit_executed(self):
+        self.order = {
+            'Account': "90874hf7ygf476tgrfgihf874bfjhb",
+            'ClOrdID': str(self.clId),
+            'Side': Side.Sell,
+            'OrderQty': 0.1,
+            'OrdType': OrderType.Limit,
+            'Price': 18,
+            'TimeInForce': TimeInForce.GoodTillCancel,
+        }
+
         self.application.send(self.instrument, self.order)
         self.clId = self.clId + 1
 
@@ -85,13 +100,15 @@ if __name__ == '__main__':
                                               logic.logFactory)
         price_initiator.start()
         while True:
-            message = input('e:exit, m:market order, l:limit order c:cancel\n')
+            message = input('e:exit, m:market order, le:limit executed, l:limit order c:cancel\n')
             if message == "e":
                 break
             if message == "m":
                 logic.send_market()
             if message == "l":
                 logic.send_limit()
+            if message == "le":
+                logic.send_limit_executed()
             if message == "c":
                 logic.cancel()
 

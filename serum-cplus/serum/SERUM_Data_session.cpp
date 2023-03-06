@@ -474,6 +474,7 @@ void SERUM_Data_session::fullSnapshot(const std::string& reqId, const marketlib:
         char buff[64];
         sprintf(buff, "%.2d:%.2d:%.2d.%.3ld", _tm->tm_hour,_tm->tm_min, _tm->tm_sec, milli_total % 1000);
 
+        int count = 0;
         for(auto bid: depth.bids) {
             FIX8::MessageBase *nomd_bid(nomd->create_group());
             *nomd_bid << new FIX8::SERUM_Data::MDEntryType(FIX8::SERUM_Data::MDEntryType_BID) // bids
@@ -483,7 +484,9 @@ void SERUM_Data_session::fullSnapshot(const std::string& reqId, const marketlib:
                       << new FIX8::SERUM_Data::MDEntryTime(buff)
                       ;
             *nomd << nomd_bid;
+            if(++count>=10)break;
         }
+        count = 0;
         for(auto ask: depth.asks) {
             FIX8::MessageBase *nomd_ask(nomd->create_group());
             *nomd_ask << new FIX8::SERUM_Data::MDEntryType(FIX8::SERUM_Data::MDEntryType_OFFER) // offers
@@ -493,6 +496,7 @@ void SERUM_Data_session::fullSnapshot(const std::string& reqId, const marketlib:
                       << new FIX8::SERUM_Data::MDEntryTime(buff)
                       ;
             *nomd << nomd_ask;
+            if(++count>=10)break;
         }
     }
 

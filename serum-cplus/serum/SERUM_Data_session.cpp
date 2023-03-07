@@ -233,10 +233,11 @@ bool SERUM_Data_session::operator() (const class FIX8::SERUM_Data::MarketDataReq
 
 
                 _client->subscribe(pool,depth,_clientId,[this, reqIdStr, pool] (const std::string &exch, const std::string &pair, const std::any &data) {
-                   auto marketBook = std::any_cast<BrokerModels::MarketBook>(data);
+
+                    auto marketBook = std::any_cast<BrokerModels::MarketBook>(data);
                     _logger->Debug((boost::format("Session | --> 35=W, %1%, Ask(%2%) AskSize(%3%) --- Bid(%4%) BidSize(%5%)")
                                     % pair % marketBook.askPrice% marketBook.askSize% marketBook.bidPrice% marketBook.bidSize).str().c_str());
-                   auto* _sess = const_cast<SERUM_Data_session*>(this);
+                    auto* _sess = const_cast<SERUM_Data_session*>(this);
                     _sess->fullSnapshot(reqIdStr, pool, marketBook);
                });
             }
@@ -244,15 +245,13 @@ bool SERUM_Data_session::operator() (const class FIX8::SERUM_Data::MarketDataReq
             else if(depth == marketlib::market_depth_t::full){
                 _logger->Info((boost::format("Session | MD subscribe FULL to %1% : %2%, depth(%3%), update type(%4%)")
                                % request.engine % request.symbol % request.depth % request.update_type).str().c_str());
-                _client->subscribe(pool, depth, _clientId,
-                        [this, reqIdStr, pool] (const std::string &exch, const std::string &pair, const std::any &data) {
-                            auto marketDepth = std::any_cast<BrokerModels::DepthSnapshot>(data);
-                            _logger->Debug((boost::format("Session | --> 35=W, %1% , count = %2%")
-                                            % pair % (marketDepth.bids.size() + marketDepth.asks.size()) ).str().c_str());
-                            auto* _sess = const_cast<SERUM_Data_session*>(this);
-                            _sess->fullSnapshot(reqIdStr, pool, marketDepth);
-                        }
-                );
+                _client->subscribe(pool, depth, _clientId,[this, reqIdStr, pool] (const std::string &exch, const std::string &pair, const std::any &data) {
+                    auto marketDepth = std::any_cast<BrokerModels::DepthSnapshot>(data);
+                    _logger->Debug((boost::format("Session | --> 35=W, %1% , count = %2%")
+                                    % pair % (marketDepth.bids.size() + marketDepth.asks.size()) ).str().c_str());
+                    auto* _sess = const_cast<SERUM_Data_session*>(this);
+                    _sess->fullSnapshot(reqIdStr, pool, marketDepth);
+                });
             }
         }
         catch(std::exception& ex)
@@ -457,48 +456,52 @@ void SERUM_Data_session::fullSnapshot(const std::string& reqId, const marketlib:
                     End Repeating Group
      */
 
+
     auto *mdr(new FIX8::SERUM_Data::MarketDataSnapshotFullRefresh);
     *mdr   << new FIX8::SERUM_Data::Symbol (sec_id.symbol)
            << new FIX8::SERUM_Data::SecurityExchange (sec_id.engine)
-           << new FIX8::SERUM_Data::NoMDEntries(depth.asks.size() + depth.bids.size())
            << new FIX8::SERUM_Data::MDReqID (reqId)
             ;
 
-    {
-        FIX8::GroupBase *nomd(mdr->find_group< FIX8::SERUM_Data::MarketDataSnapshotFullRefresh::NoMDEntries >());
+    FIX8::GroupBase *nomd(mdr->find_group< FIX8::SERUM_Data::MarketDataSnapshotFullRefresh::NoMDEntries >());
 
-        time_t update_time = std::chrono::system_clock::to_time_t(depth.time);
-        tm *_tm = gmtime(&update_time);
-        std::chrono::system_clock::duration duration = depth.time.time_since_epoch();
-        auto milli_total = std::chrono::duration_cast<std::chrono::milliseconds> (duration).count();
-        char buff[64];
-        sprintf(buff, "%.2d:%.2d:%.2d.%.3ld", _tm->tm_hour,_tm->tm_min, _tm->tm_sec, milli_total % 1000);
+    time_t update_time = std::chrono::system_clock::to_time_t(depth.time);
+    tm *_tm = gmtime(&update_time);
+    std::chrono::system_clock::duration duration = depth.time.time_since_epoch();
+    auto milli_total = std::chrono::duration_cast<std::chrono::milliseconds> (duration).count();
+    char buff[64];
+    sprintf(buff, "%.2d:%.2d:%.2d.%.3ld", _tm->tm_hour,_tm->tm_min, _tm->tm_sec, milli_total % 1000);
 
-        int count = 0;
-        for(auto bid: depth.bids) {
-            FIX8::MessageBase *nomd_bid(nomd->create_group());
-            *nomd_bid << new FIX8::SERUM_Data::MDEntryType(FIX8::SERUM_Data::MDEntryType_BID) // bids
-                      << new FIX8::SERUM_Data::MDEntryPx(bid.price) // bids
-                      << new FIX8::SERUM_Data::MDEntrySize(bid.volume) // bids
-                      << new FIX8::SERUM_Data::MDEntryDate((tm&)(*_tm))
-                      << new FIX8::SERUM_Data::MDEntryTime(buff)
-                      ;
-            *nomd << nomd_bid;
-            if(++count>=10)break;
-        }
-        count = 0;
-        for(auto ask: depth.asks) {
-            FIX8::MessageBase *nomd_ask(nomd->create_group());
-            *nomd_ask << new FIX8::SERUM_Data::MDEntryType(FIX8::SERUM_Data::MDEntryType_OFFER) // offers
-                      << new FIX8::SERUM_Data::MDEntryPx(ask.price) // bids
-                      << new FIX8::SERUM_Data::MDEntrySize(ask.volume) // bids
-                      << new FIX8::SERUM_Data::MDEntryDate((tm&)(*_tm))
-                      << new FIX8::SERUM_Data::MDEntryTime(buff)
-                      ;
-            *nomd << nomd_ask;
-            if(++count>=10)break;
-        }
+    int count = 0, total_count = 0;
+    for(auto bid: depth.bids) {
+        FIX8::MessageBase *nomd_bid(nomd->create_group());
+        *nomd_bid << new FIX8::SERUM_Data::MDEntryType(FIX8::SERUM_Data::MDEntryType_BID) // bids
+                  << new FIX8::SERUM_Data::MDEntryPx(bid.price) // bids
+                  << new FIX8::SERUM_Data::MDEntrySize(bid.volume) // bids
+                  << new FIX8::SERUM_Data::MDEntryDate((tm&)(*_tm))
+                  << new FIX8::SERUM_Data::MDEntryTime(buff)
+                  ;
+        *nomd << nomd_bid;
+        total_count++;
+        count++;
+        if(count>=10)break;
     }
+    count = 0;
+    for(auto ask: depth.asks) {
+        FIX8::MessageBase *nomd_ask(nomd->create_group());
+        *nomd_ask << new FIX8::SERUM_Data::MDEntryType(FIX8::SERUM_Data::MDEntryType_OFFER) // offers
+                  << new FIX8::SERUM_Data::MDEntryPx(ask.price) // bids
+                  << new FIX8::SERUM_Data::MDEntrySize(ask.volume) // bids
+                  << new FIX8::SERUM_Data::MDEntryDate((tm&)(*_tm))
+                  << new FIX8::SERUM_Data::MDEntryTime(buff)
+                  ;
+        *nomd << nomd_ask;
+        total_count++;
+        count++;
+        if(count>=10)break;
+    }
+
+    *mdr << new FIX8::SERUM_Data::NoMDEntries(total_count);
 
     FIX8::Session::send(mdr);
 }

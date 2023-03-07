@@ -130,11 +130,29 @@ void SerumTrade::onEventHandler(const string &message) {
 			return a.exchId == exch_id;
 		});
 
-		order->state = order_state_t::ost_Filled;
-		order->type = report_type_t::rt_fill_trade;
-		order->lastShares = stod(parsed_data.at("size").as_string().c_str());
-		order->leavesQty = 0;
-		order->lastPx = stod(parsed_data.at("price").as_string().c_str());
+		if (order != orders_lst.end())
+		{
+			order->state = order_state_t::ost_Filled;
+			order->type = report_type_t::rt_fill_trade;
+			order->lastShares = stod(parsed_data.at("size").as_string().c_str());
+			order->leavesQty = 0;
+			order->lastPx = stod(parsed_data.at("price").as_string().c_str());
+			return;
+		}
+
+		auto report = ExecutionReport();
+		report.clId = parsed_data.at("clientId").as_string().c_str();
+		report.exchId = exch_id;
+		report.orderType = order_type_t::ot_Limit;
+		report.type = report_type_t::rt_fill_trade;
+		report.state = order_state_t::ost_Filled;
+		report.limitPrice = stod(parsed_data.at("price").as_string().c_str());
+		report.cumQty = stod(parsed_data.at("size").as_string().c_str());
+		report.lastShares = stod(parsed_data.at("size").as_string().c_str());
+		report.lastPx = stod(parsed_data.at("price").as_string().c_str());
+		report.side = stringToOrderSide(parsed_data.at("side").as_string().c_str());
+		orders_lst.push_back(report);
+		// broadcastForMarketSubscribers(market, report);
 	}
 	else if (type == "done") {
 		auto& orders_lst = _execution_reports[market];
@@ -153,6 +171,8 @@ void SerumTrade::onEventHandler(const string &message) {
 			report.orderType = order_type_t::ot_Limit;
 			report.type = is_canceled ? report_type_t::rt_canceled : report_type_t::rt_fill_trade;
 			report.state = is_canceled ? order_state_t::ost_Canceled : order_state_t::ost_Filled;
+			report.limitPrice = 0;
+			report.cumQty = 0;
 			report.lastShares = 0;
 			report.lastPx = 0;
 			report.side = stringToOrderSide(parsed_data.at("side").as_string().c_str());

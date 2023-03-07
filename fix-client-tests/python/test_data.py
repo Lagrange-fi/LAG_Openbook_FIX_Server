@@ -75,13 +75,13 @@ if __name__ == '__main__':
         while True:
             message = input('enter e to exit the app\n')
             if message == 'st':
-                logic.subscribePools(50, False)
+                logic.subscribePools(5, False)
             if message == 'ut':
-                logic.unsubscribePools(50, False)
+                logic.unsubscribePools(5, False)
             if message == 'sb':
-                logic.subscribePools(50, True)
+                logic.subscribePools(1, True)
             if message == 'ub':
-                logic.unsubscribePools(50, True)
+                logic.unsubscribePools(1, True)
             if message == 'e':
                 break
 

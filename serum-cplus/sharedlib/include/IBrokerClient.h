@@ -15,11 +15,27 @@
 #include <boost/multi_index/composite_key.hpp>
 
 class IBrokerClient {
+public :
+	enum class BrokerEvent {
+		Info,
+		Debug,
+		Error,
+		SessionLogon,
+		SessionLogout,
+		CoinUpdate,
+		CoinSubscribed,
+		CoinUnsubscribed,
+		ConnectorStarted,
+		ConnectorStopped,
+		CoinSubscribedFault,
+		CoinUnsubscribedFault,
+		SubscribedCoinIsNotValid
+	};
 private:
 	typedef std::string string;
 	typedef marketlib::market_depth_t SubscriptionModel;
 	typedef marketlib::instrument_descr_t instrument;
-	typedef std::function <void(const string&, const string&, const std::any&)> callback_subscribed_channel;
+	typedef std::function <void(const string&, const string&, const std::any&, BrokerEvent)> callback_subscribed_channel;
 	// typedef std::function <void(const string&, const instrument&, const BrokerModels::MarketBook&)> callbackTop;
 	// typedef std::function <void(const string&, const instrument&, const BrokerModels::DepthSnapshot&)> callbackDepth;
 public:
@@ -35,6 +51,7 @@ public:
 	using SubscribedChannels = boost::multi_index::multi_index_container<
         SubscribeChannel,
         boost::multi_index::indexed_by<
+			// <0>
             boost::multi_index::hashed_unique<
                 boost::multi_index::tag<struct SubscribeChannelsByClientAndMarketAndSubscribeModel>,
                 boost::multi_index::composite_key<
@@ -44,6 +61,7 @@ public:
 					boost::multi_index::member<SubscribeChannel, decltype(SubscribeChannel::smodel), &SubscribeChannel::smodel >
                 >
             >,
+			// <1>
 			boost::multi_index::hashed_non_unique<
                 boost::multi_index::tag<struct SubscribeChannelsByMarketAndSubscribeModel>,
                 boost::multi_index::composite_key<
@@ -52,37 +70,18 @@ public:
 					boost::multi_index::member<SubscribeChannel, decltype(SubscribeChannel::smodel), &SubscribeChannel::smodel >
                 >
             >,
+			// <2>
 			boost::multi_index::hashed_non_unique<
                 boost::multi_index::tag<struct SubscribeChannelsByClient>,
-                boost::multi_index::composite_key<
-                    SubscribeChannel,
-					boost::multi_index::member<SubscribeChannel, decltype(SubscribeChannel::clientId), &SubscribeChannel::clientId >
-                >
+				boost::multi_index::member<SubscribeChannel, decltype(SubscribeChannel::clientId), &SubscribeChannel::clientId >
             >,
+			// <3>
 			boost::multi_index::hashed_non_unique<
                 boost::multi_index::tag<struct SubscribeChannelsByMarket>,
-                boost::multi_index::composite_key<
-                    SubscribeChannel,
-					boost::multi_index::member<SubscribeChannel, decltype(SubscribeChannel::market), &SubscribeChannel::market >
-                >
+				boost::multi_index::member<SubscribeChannel, decltype(SubscribeChannel::market), &SubscribeChannel::market >
             >
         >
     >;
-
-	enum class BrokerEvent {
-		Info,
-		Debug,
-		Error,
-		SessionLogon,
-		SessionLogout,
-		CoinSubscribed,
-		CoinUnsubscribed,
-		ConnectorStarted,
-		ConnectorStopped,
-		CoinSubscribedFault,
-		CoinUnsubscribedFault,
-		SubscribedCoinIsNotValid
-	};
 
 	IBrokerClient() {}
 	IBrokerClient(const IBrokerClient&) = delete;

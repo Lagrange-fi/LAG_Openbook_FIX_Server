@@ -25,7 +25,7 @@ int main () {
         logger,
         settings,
         pools,
-        [&logger](const string& exch, const string& symbol, broker_event event, const any& info) {
+        [&logger](const string& exch, const string& symbol, IBrokerClient::BrokerEvent event, const any& info) {
             // cout << event << " " << info << endl;
         }
     );
@@ -46,31 +46,43 @@ int main () {
         } else if (cmd == "quit") {
             break;
         } else if (cmd == "st") {
-            client.subscribe(instrument, market_depth_t::top, "Cli_1",  [&logger](const string& exch, const string& symbol, const std::any& data)
+            client.subscribe(instrument, market_depth_t::top, "Cli_1",  [&logger](const string& exch, const string& symbol, const std::any& data, IBrokerClient::BrokerEvent event)
             {
                 logger->Info("Cli_1");
-                logger->Info(formatTopInfo(exch, symbol, std::any_cast<BrokerModels::MarketBook>(data)).c_str());
+                if (event == IBrokerClient::BrokerEvent::CoinSubscribed || event == IBrokerClient::BrokerEvent::CoinSubscribed)
+                    logger->Info(formatTopInfo(exch, symbol, std::any_cast<BrokerModels::MarketBook>(data)).c_str());
+                else
+                    logger->Info(std::any_cast<string>(data).c_str());
             });
-            client.subscribe(instrument, market_depth_t::top, "Cli_2", [&logger](const string& exch, const string& symbol, const std::any& data)
+            client.subscribe(instrument, market_depth_t::top, "Cli_2", [&logger](const string& exch, const string& symbol, const std::any& data, IBrokerClient::BrokerEvent event)
             {
                 logger->Info("Cli_2");
-                logger->Info(formatTopInfo(exch, symbol, std::any_cast<BrokerModels::MarketBook>(data)).c_str());
+                if (event == IBrokerClient::BrokerEvent::CoinSubscribed || event == IBrokerClient::BrokerEvent::CoinSubscribed)
+                    logger->Info(formatTopInfo(exch, symbol, std::any_cast<BrokerModels::MarketBook>(data)).c_str());
+                else
+                    logger->Info(std::any_cast<string>(data).c_str());
             });
         } else if (cmd == "ut") {
             client.unsubscribe(instrument, market_depth_t::top, "Cli_1");
         } else if (cmd == "st2") {
-            client.subscribe(instrument, market_depth_t::top, "Cli_2", [&logger](const string& exch, const string& symbol, const std::any& data)
+            client.subscribe(instrument, market_depth_t::top, "Cli_2", [&logger](const string& exch, const string& symbol, const std::any& data, IBrokerClient::BrokerEvent event)
             {
                 logger->Info("Cli_2");
-                logger->Info(formatTopInfo(exch, symbol, std::any_cast<BrokerModels::MarketBook>(data)).c_str());
+                if (event == IBrokerClient::BrokerEvent::CoinSubscribed || event == IBrokerClient::BrokerEvent::CoinSubscribed)
+                    logger->Info(formatTopInfo(exch, symbol, std::any_cast<BrokerModels::MarketBook>(data)).c_str());
+                else
+                    logger->Info(std::any_cast<string>(data).c_str());
             });
         } else if (cmd == "ut2") {
             client.unsubscribe(instrument, market_depth_t::top, "Cli_2");
         }else if (cmd == "sd") {
-            client.subscribe(instrument, market_depth_t::full, "Cli_1", [&logger](const string& exch, const string& symbol, const std::any& data)
+            client.subscribe(instrument, market_depth_t::full, "Cli_1", [&logger](const string& exch, const string& symbol, const std::any& data, IBrokerClient::BrokerEvent event)
             {
                 logger->Info("Cli_1");
-                logger->Info(formatDepthInfo(exch,  symbol, std::any_cast<BrokerModels::DepthSnapshot>(data)).c_str());
+                if (event == IBrokerClient::BrokerEvent::CoinSubscribed || event == IBrokerClient::BrokerEvent::CoinSubscribed)
+                    logger->Info(formatDepthInfo(exch, symbol, std::any_cast<BrokerModels::DepthSnapshot>(data)).c_str());
+                else
+                    logger->Info(std::any_cast<string>(data).c_str());
             });
         } else if (cmd == "ud") {
             client.unsubscribe(instrument, market_depth_t::full, "Cli_1");

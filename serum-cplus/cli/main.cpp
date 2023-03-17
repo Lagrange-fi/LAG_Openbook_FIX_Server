@@ -48,7 +48,7 @@ int main(int argc, char **argv) {
     std::shared_ptr < ISettings > settings (new SerumSettings);
     std::shared_ptr < IBrokerClient > serumClient( std::shared_ptr <IBrokerClient>(
             new SerumMD(logger,settings, std::make_shared< PoolsRequester >( logger, settings ),
-            [](const std::string &exchangeName, const std::string symbol, marketlib::broker_event, const std::any &details) {}))
+            [](const std::string &exchangeName, const std::string symbol, IBrokerClient::BrokerEvent, const std::any &details) {}))
     );
 
     std::shared_ptr < IPoolsRequester > pools(new PoolsRequester(logger, settings, "./market_ord.json"));

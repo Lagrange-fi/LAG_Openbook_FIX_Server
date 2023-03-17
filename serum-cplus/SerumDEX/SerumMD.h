@@ -31,12 +31,13 @@ private:
 	typedef std::shared_ptr < ISettings > settings_ptr;
 	typedef std::shared_ptr < IPoolsRequester > pools_ptr;
 	typedef BrokerModels::Market Market;
+	typedef IBrokerClient::BrokerEvent BrokerEvent;
 	typedef std::map < string,  BrokerModels::DepthSnapshot > depth_snapshots;
 	typedef std::map < string,  BrokerModels::MarketBook > top_snapshots;
 	typedef marketlib::market_depth_t SubscriptionModel;
 	typedef marketlib::instrument_descr_t instrument;
-	typedef std::function <void(const string&, const string&, const std::any&)> callback_subscribed_channel;
-	typedef std::function <void(const string &exchangeName, const string& symbol, marketlib::broker_event, const std::any &details)> callback_on_event;
+	typedef std::function <void(const string&, const string&, const std::any&, BrokerEvent)> callback_subscribed_channel;
+	typedef std::function <void(const string &exchangeName, const string& symbol, BrokerEvent, const std::any &details)> callback_on_event;
 
 protected:
 
@@ -92,5 +93,6 @@ public:
 
 private:
 	void subscribe(const instrument&, SubscriptionModel);
+	void broadcastForMarketSubscribers(const string&, SubscriptionModel, const std::any&, BrokerEvent) const;
 };
 

@@ -2,8 +2,6 @@
 
 #define SERUM_LISTENER_DEBUG
 
-using namespace std;
-using namespace std::chrono;
 using namespace SerumAdapter;
 using namespace BrokerModels;
 using namespace marketlib;
@@ -53,27 +51,19 @@ void SerumTrade::onEventHandler(const string &message) {
 		_logger->Error(message.c_str());
 		if (message.find("Invalid market name provided") != string::npos) {
 			auto s1 = message.find("'")+1;
-			auto symbol = message.substr( s1, message.find("'", s1) - s1);
+			auto market = message.substr( s1, message.find("'", s1) - s1);
 			_onEvent(
 					getName(),
-					symbol,
+					market,
 					marketlib::broker_event::subscribed_coin_is_not_valid, 
-					(boost::format(R"(Subscription to %1% is not supported by %2%)") % symbol % getName()).str()
+					(boost::format(R"(Subscription to %1% is not supported by %2%)") % market % getName()).str()
 				);
 
-			auto chnls = _channels
+			auto it_chnls = _channels
 				.get<SubscribeChannelsByMarket>()
-				.equal_range(boost::make_tuple(symbol));
-			list<string> client_ids;
-			for( auto chnl = chnls.first, end = chnls.second; chnl != end; ++chnl )
-				client_ids.push_back(chnl->clientId);	
-			for (const auto& a: client_ids)
-				_channels.erase(
-						_channels
-						.get<SubscribeChannelsByClientAndMarket>()
-						.find(boost::make_tuple(
-							a,
-							symbol )));
+				.find(market);
+			while (it_chnls != _channels.get<SubscribeChannelsByMarket>().end() && it_chnls->market == market)
+				it_chnls = _channels.get<SubscribeChannelsByMarket>().erase(it_chnls);
 		}
 		return;
 	}
@@ -84,9 +74,9 @@ void SerumTrade::onEventHandler(const string &message) {
             order.clId=    set.at("clientId").as_string().c_str(); //strtoull(set.at("clientId").as_string().c_str(), nullptr, 0),
             order.exchId= set.at("orderId").as_string().c_str(); // atouint128(set.at("orderId").as_string().c_str())
             order.secId= "";
-            order.cumQty= stod(set.at("size").as_string().c_str());
-            order.leavesQty= stod(set.at("size").as_string().c_str());
-            order.limitPrice= stod(set.at("price").as_string().c_str());
+            order.cumQty= std::stod(set.at("size").as_string().c_str());
+            order.leavesQty= std::stod(set.at("size").as_string().c_str());
+            order.limitPrice= std::stod(set.at("price").as_string().c_str());
             order.side= stringToOrderSide(set.at("side").as_string().c_str());
             order.state= order_state_t::ost_New;
 			order.type= report_type_t::rt_new;
@@ -116,9 +106,9 @@ void SerumTrade::onEventHandler(const string &message) {
 			return a.exchId == exch_id;
 		});
 		order->side = stringToOrderSide(parsed_data.at("side").as_string().c_str());
-		order->cumQty = stod(parsed_data.at("size").as_string().c_str());
-		order->leavesQty = stod(parsed_data.at("size").as_string().c_str());
-		order->limitPrice = stod(parsed_data.at("price").as_string().c_str());
+		order->cumQty = std::stod(parsed_data.at("size").as_string().c_str());
+		order->leavesQty = std::stod(parsed_data.at("size").as_string().c_str());
+		order->limitPrice = std::stod(parsed_data.at("price").as_string().c_str());
 		order->state= order_state_t::ost_Replaced;
 		order->type= report_type_t::rt_replaced;
 		broadcastForMarketSubscribers(market, *order);
@@ -134,9 +124,9 @@ void SerumTrade::onEventHandler(const string &message) {
 		{
 			order->state = order_state_t::ost_Filled;
 			order->type = report_type_t::rt_fill_trade;
-			order->lastShares = stod(parsed_data.at("size").as_string().c_str());
+			order->lastShares = std::stod(parsed_data.at("size").as_string().c_str());
 			order->leavesQty = 0;
-			order->lastPx = stod(parsed_data.at("price").as_string().c_str());
+			order->lastPx = std::stod(parsed_data.at("price").as_string().c_str());
 			return;
 		}
 
@@ -146,10 +136,10 @@ void SerumTrade::onEventHandler(const string &message) {
 		report.orderType = order_type_t::ot_Limit;
 		report.type = report_type_t::rt_fill_trade;
 		report.state = order_state_t::ost_Filled;
-		report.limitPrice = stod(parsed_data.at("price").as_string().c_str());
-		report.cumQty = stod(parsed_data.at("size").as_string().c_str());
-		report.lastShares = stod(parsed_data.at("size").as_string().c_str());
-		report.lastPx = stod(parsed_data.at("price").as_string().c_str());
+		report.limitPrice = std::stod(parsed_data.at("price").as_string().c_str());
+		report.cumQty = std::stod(parsed_data.at("size").as_string().c_str());
+		report.lastShares = std::stod(parsed_data.at("size").as_string().c_str());
+		report.lastPx = std::stod(parsed_data.at("price").as_string().c_str());
 		report.side = stringToOrderSide(parsed_data.at("side").as_string().c_str());
 		orders_lst.push_back(report);
 		// broadcastForMarketSubscribers(market, report);
@@ -181,12 +171,12 @@ void SerumTrade::onEventHandler(const string &message) {
 			return;
 		}
 		// logger->Info(message.c_str());
-		// double remaining = is_canceled ? stod(parsed_data.at("sizeRemaining").as_string().c_str()) : 0;
+		// double remaining = is_canceled ? std::stod(parsed_data.at("sizeRemaining").as_string().c_str()) : 0;
 
 		order->type = is_canceled ? report_type_t::rt_canceled : report_type_t::rt_fill_trade;
 		order->state = is_canceled ? order_state_t::ost_Canceled : order_state_t::ost_Filled;
 		if (is_canceled) 
-			order->leavesQty = stod(parsed_data.at("sizeRemaining").as_string().c_str());
+			order->leavesQty = std::stod(parsed_data.at("sizeRemaining").as_string().c_str());
 		else
 			order->leavesQty = 0;
 		broadcastForMarketSubscribers(market, *order);
@@ -199,18 +189,15 @@ void SerumTrade::onEventHandler(const string &message) {
 void SerumTrade::broadcastForMarketSubscribers(const string& market, const ExecutionReport& report) const {
 	auto chnls = _channels
 			.get<SubscribeChannelsByMarket>()
-			.equal_range(boost::make_tuple(market));
+			.equal_range(market);
 
-	auto next = chnls.first;
-	auto current = chnls.first;
-	while(next != chnls.second) {
-		next++;
-		current->callback(
+	while(chnls.first != chnls.second) {
+		chnls.first->callback(
 			getName(),
 			market,
 			report
 		);
-		current = next;
+		++chnls.first;
 	}
 }
 
@@ -267,9 +254,7 @@ void SerumTrade::stop() {
 void SerumTrade::listen(const SerumTrade::Instrument& instr, const string& clientId, callback_t callback) {
 	auto chnls = _channels
 		.get<SubscribeChannelsByMarket>()
-		.equal_range(boost::make_tuple(
-			getMarketFromInstrument(instr)
-		));
+		.equal_range(getMarketFromInstrument(instr));
 
 	if (chnls.first == chnls.second) {
 		_connection.async_send((boost::format(R"({
@@ -321,9 +306,7 @@ void SerumTrade::unlisten(const SerumTrade::Instrument& instr, const string& cli
 	_channels.erase(chnl);
 	auto chnls = _channels
 		.get<SubscribeChannelsByMarket>()
-		.equal_range(boost::make_tuple(
-			getMarketFromInstrument(instr)
-		));
+		.equal_range(getMarketFromInstrument(instr));
 	if (chnls.first == chnls.second) {
 		_connection.async_send((boost::format(R"({
 			"op": "unsubscribe",
@@ -338,9 +321,7 @@ void SerumTrade::unlisten(const SerumTrade::Instrument& instr, const string& cli
 void SerumTrade::unlistenForClientId(const string& clientId) {
 	auto chnls = _channels
 		.get<SubscribeChannelsByClient>()
-		.equal_range(boost::make_tuple(
-			clientId
-		));
+		.equal_range(clientId);
 
 	while(chnls.first != chnls.second) {
 		unlisten(chnls.first->instr, clientId);
@@ -348,7 +329,7 @@ void SerumTrade::unlistenForClientId(const string& clientId) {
 	}
 }
 
-string SerumTrade::getName() const {
+std::string SerumTrade::getName() const {
 	return _settings->get(ISettings::Property::ExchangeName);
 }
 

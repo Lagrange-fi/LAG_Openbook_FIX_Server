@@ -1,8 +1,6 @@
 #include "SerumMD.h"
 
 #define SERUM_DEBUG
-#define DATA_CHANNEL_CAST_TO_TOP_DATA(x) ((TopDataChannel*)&(*x))
-#define DATA_CHANNEL_CAST_TO_DEPTH_DATA(x) ((DepthDataChannel*)&(*x))
 
 using namespace std;
 using namespace std::chrono;
@@ -14,20 +12,20 @@ void SerumMD::onOpen() {
 #ifdef SERUM_DEBUG
 _logger->Debug("> SerumMD::onOpen");
 #endif
-	_onEvent(getName(), "", broker_event::session_logon, "Serum DEX Logon: " + getName());
+	_onEvent(getName(), "", BrokerEvent::SessionLogon, "Serum DEX Logon: " + getName());
 }
 void SerumMD::onClose() {
 #ifdef SERUM_DEBUG
 	_logger->Debug("> SerumMD::onClose");
 #endif
-	_onEvent(getName(), "", broker_event::session_logout, "Serum DEX Logout: " + getName());
+	_onEvent(getName(), "", BrokerEvent::SessionLogout, "Serum DEX Logout: " + getName());
 	clearMarkets();
 }
 void SerumMD::onFail() {
 #ifdef SERUM_DEBUG
 _logger->Debug("> SerumMD::onFail");
 #endif
-	_onEvent(getName(), "", broker_event::session_logout, "Serum DEX Logout: " + getName());
+	_onEvent(getName(), "", BrokerEvent::SessionLogout, "Serum DEX Logout: " + getName());
 	clearMarkets();
 }
 void SerumMD::onMessage(const string& message) {
@@ -52,29 +50,34 @@ void SerumMD::onEventHandler(const string &message) {
 		_logger->Error(message.c_str());
 		if (message.find("Invalid market name provided") != string::npos) {
 			auto s1 = message.find("'")+1;
-			auto symbol = message.substr( s1, message.find("'", s1) - s1);
-			_onEvent(
-					getName(),
-					symbol,
-					marketlib::broker_event::subscribed_coin_is_not_valid, 
-					(boost::format(R"(Subscription to %1% is not supported by %2%)") % symbol % getName()).str()
-				);
+			auto market = message.substr( s1, message.find("'", s1) - s1);
 
-			auto chnls = _channels
+			// broadcastForMarketSubscribers(
+			// 	market, 
+			// 	SubscriptionModel::top, 
+			// 	(boost::format(R"(Subscription to %1% is not supported by %2%)") % market % getName()).str(),
+			// 	BrokerEvent::SubscribedCoinIsNotValid
+			// );
+
+			// broadcastForMarketSubscribers(
+			// 	market, 
+			// 	SubscriptionModel::full, 
+			// 	(boost::format(R"(Subscription to %1% is not supported by %2%)") % market % getName()).str(),
+			// 	BrokerEvent::SubscribedCoinIsNotValid
+			// );
+
+			auto it_chnl = _channels
 				.get<SubscribeChannelsByMarket>()
-				.equal_range(boost::make_tuple(symbol));
-			list<pair<string, marketlib::market_depth_t>> credentials;
-			for( auto chnl = chnls.first, end = chnls.second; chnl != end; ++chnl )
-				credentials.push_back(pair<string, marketlib::market_depth_t>{chnl->clientId, chnl->smodel});
-			for (const auto& a: credentials)
-				_channels.erase(
-						_channels
-						.get<SubscribeChannelsByClientAndMarketAndSubscribeModel>()
-						.find(boost::make_tuple(
-							a.first,
-							symbol,
-							a.second
-						)));
+				.find(market);
+			while (it_chnl != _channels.get<SubscribeChannelsByMarket>().end() && it_chnl->market == market) {
+				it_chnl->callback(
+					getName(),
+					market,
+					(boost::format(R"(Subscription to %1% is not supported by %2%)") % market % getName()).str(),
+					BrokerEvent::SubscribedCoinIsNotValid
+				);
+				it_chnl = _channels.get<SubscribeChannelsByMarket>().erase(it_chnl);
+			}
 		}
 		return;
 	}
@@ -82,6 +85,9 @@ void SerumMD::onEventHandler(const string &message) {
 	// logger->Info(message.c_str());
 	string market = parsed_data.at("market").as_string().c_str();
 	if (type == "quote") {
+			bool is_subscribe_quote = false;
+			if (!_top_snapshot.count(market))
+				is_subscribe_quote = true;
 			_top_snapshot[market] = MarketBook{
 				system_clock::now(), 
 				stod(parsed_data.at("bestBid").at(0).as_string().c_str()),
@@ -90,20 +96,7 @@ void SerumMD::onEventHandler(const string &message) {
 				stod(parsed_data.at("bestAsk").at(1).as_string().c_str())
 			};
 		
-		auto chnls = _channels
-			.get<SubscribeChannelsByMarketAndSubscribeModel>()
-			.equal_range(boost::make_tuple(
-				market, 
-				SubscriptionModel::top
-			));
-		while(chnls.first != chnls.second) {
-			chnls.first->callback(
-				_settings->get(ISettings::Property::ExchangeName),
-				chnls.first->instr.symbol,
-				_top_snapshot[market]
-			);
-			++chnls.first;
-  		}
+		broadcastForMarketSubscribers(market, SubscriptionModel::top, _top_snapshot[market], is_subscribe_quote ? BrokerEvent::CoinSubscribed : BrokerEvent::CoinUpdate);
 	} else if (type == "l2snapshot") {
 		auto jsonToObject = [](const boost::json::value& val, std::list<BrokerModels::MarketUpdate>& vec) {
 			for(auto set : val.as_array()) {
@@ -120,22 +113,8 @@ void SerumMD::onEventHandler(const string &message) {
 		depth.asks = std::list<BrokerModels::MarketUpdate>();
 		jsonToObject(parsed_data.at("asks"), depth.asks);
 		jsonToObject(parsed_data.at("bids"), depth.bids);
-		// application->onReport(name, key, depth);
 
-		auto chnls = _channels
-			.get<SubscribeChannelsByMarketAndSubscribeModel>()
-			.equal_range(boost::make_tuple(
-				market, 
-				SubscriptionModel::full
-			));
-		while(chnls.first != chnls.second){
-			chnls.first->callback(
-				_settings->get(ISettings::Property::ExchangeName),
-				chnls.first->instr.symbol,
-				depth
-			);
-			++chnls.first;
-  		}
+		broadcastForMarketSubscribers(market, SubscriptionModel::full, depth, BrokerEvent::CoinSubscribed);
 	} else if (type == "l2update") {
 		// logger->Info(message.c_str());
 		auto updateDepth = [](const boost::json::value& val, std::list<BrokerModels::MarketUpdate>& list, bool is_ask) {
@@ -157,32 +136,32 @@ void SerumMD::onEventHandler(const string &message) {
 
 			if (is_ask)
 				list.sort([](const MarketUpdate&a, const MarketUpdate&b){ return a.price < b.price; });
-				// std::sort(begin(vec), end(vec), 
-				// 	[](const MarketUpdate&a, const MarketUpdate&b){ return a.price < b.price; });
 			else
 				list.sort([](const MarketUpdate&a, const MarketUpdate&b){ return a.price > b.price; });
-				// std::sort(begin(vec), end(vec), 
-				// 	[](const MarketUpdate&a, const MarketUpdate&b){ return a.price > b.price; });
 		};
 		string key =  parsed_data.at("market").as_string().c_str();
 		auto& depth = _depth_snapshot[key];
 		updateDepth(parsed_data.at("asks"), depth.asks, true);
 		updateDepth(parsed_data.at("bids"), depth.bids, false);
+		broadcastForMarketSubscribers(market, SubscriptionModel::full, depth, BrokerEvent::CoinUpdate);
+	}
+}
 
-		auto chnls = _channels
-			.get<SubscribeChannelsByMarketAndSubscribeModel>()
-			.equal_range(boost::make_tuple(
-				market, 
-				SubscriptionModel::full
-			));
-		while(chnls.first != chnls.second){
-			chnls.first->callback(
-				_settings->get(ISettings::Property::ExchangeName),
-				chnls.first->instr.symbol,
-				depth
-			);
-			++chnls.first;
-  		}
+void SerumMD::broadcastForMarketSubscribers(const string& market, SubscriptionModel model, const std::any& data, BrokerEvent event) const {
+	auto chnls = _channels
+		.get<SubscribeChannelsByMarketAndSubscribeModel>()
+		.equal_range(boost::make_tuple(
+			market, 
+			model
+		));
+	while(chnls.first != chnls.second){
+		chnls.first->callback(
+			getName(),
+			chnls.first->instr.symbol,
+			data,
+			event
+		);
+		++chnls.first;
 	}
 }
 
@@ -273,14 +252,16 @@ void SerumMD::subscribe(const instrument& instr, SubscriptionModel model, const 
 				callback(
 					_settings->get(ISettings::Property::ExchangeName),
 					getMarketFromInstrument(instr),
-					_top_snapshot[getMarketFromInstrument(instr)]
+					_top_snapshot[getMarketFromInstrument(instr)],
+					BrokerEvent::CoinSubscribed
 				);
 			}
 			else {
 				callback(
 					_settings->get(ISettings::Property::ExchangeName),
 					getMarketFromInstrument(instr),
-					_depth_snapshot[getMarketFromInstrument(instr)]
+					_depth_snapshot[getMarketFromInstrument(instr)],
+					BrokerEvent::CoinSubscribed
 				);
 			}
 				
@@ -305,67 +286,6 @@ void SerumMD::subscribe(const instrument& instr, SubscriptionModel model, const 
 	}
 }
 
-// void SerumMD::subscribe(const instrument& instr, const string& clientId, callbackTop callback) {
-// 	auto chnls = channels
-// 		.get<SubscribeChannelsByMarketAndSubscribeModel>()
-// 		.equal_range(boost::make_tuple(
-// 			getMarketFromInstrument(instr), 
-// 			SubscriptionModel::top
-// 		));
-	
-// 	if (chnls.first == chnls.second) {
-// 		subscribe(instr, SubscriptionModel::top);
-// 	} else {
-// 		callback(
-// 			name,
-// 			instr,
-// 			top_snapshot[getMarketFromInstrument(instr)]
-// 		);
-// 	}
-
-	
-// 	channels.insert(
-// 		SubscribeChannel{
-// 			clientId: clientId,
-// 			market: getMarketFromInstrument(instr),
-// 			instr: instr,
-// 			smodel: SubscriptionModel::top,
-// 			callback_top: callback,
-// 			callback_depth: nullptr
-// 		}
-// 	); 
-// }
-
-// void SerumMD::subscribe(const instrument& instr, const string& clientId, callbackDepth callback) {
-// 	auto chnls = channels
-// 		.get<SubscribeChannelsByMarketAndSubscribeModel>()
-// 		.equal_range(boost::make_tuple(
-// 			getMarketFromInstrument(instr), 
-// 			SubscriptionModel::full
-// 		));
-	
-// 	if (chnls.first == chnls.second) {
-// 		subscribe(instr, SubscriptionModel::full);
-// 	} else {
-// 		callback(
-// 			name,
-// 			instr,
-// 			depth_snapshot[getMarketFromInstrument(instr)]
-// 		);
-// 	}
-
-// 	channels.insert(
-// 		SubscribeChannel{
-// 			clientId: clientId,
-// 			market: getMarketFromInstrument(instr),
-// 			instr: instr,
-// 			smodel: SubscriptionModel::full,
-// 			callback_top: nullptr,
-// 			callback_depth: callback
-// 		}
-// 	); 
-// }
-
 void SerumMD::unsubscribe(const instrument& instr, SubscriptionModel model, const string& clientId) {
 	auto chnl = _channels
 		.get<SubscribeChannelsByClientAndMarketAndSubscribeModel>()
@@ -379,6 +299,8 @@ void SerumMD::unsubscribe(const instrument& instr, SubscriptionModel model, cons
 		_logger->Error("Subscription not found");
 		return;
 	}
+
+	chnl->callback(getName(), getMarketFromInstrument(instr), "", IBrokerClient::BrokerEvent::CoinUnsubscribed);
 
 	_channels.erase(chnl);
 	auto chnls = _channels
@@ -405,9 +327,7 @@ void SerumMD::unsubscribe(const instrument& instr, SubscriptionModel model, cons
 void SerumMD::unsubscribeForClientId(const string& clientId) {
 	auto chnls = _channels
 		.get<SubscribeChannelsByClient>()
-		.equal_range(boost::make_tuple(
-			clientId
-		));
+		.equal_range(clientId);
 
 	std::list<std::pair<instrument, SubscriptionModel>> info;
 	while(chnls.first != chnls.second) {

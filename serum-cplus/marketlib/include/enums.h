@@ -245,4 +245,9 @@ namespace marketlib
 		coin_unsubscribed_fault,
 		subscribed_coin_is_not_valid
 	};
+
+    enum md_reject_reason_t
+    {
+        unknown_symbol = '0',
+    };
 }

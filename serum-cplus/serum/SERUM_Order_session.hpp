@@ -14,6 +14,7 @@
 #include <sharedlib/include/IBrokerClient.h>
 #include <sharedlib/include/IPoolsRequester.h>
 #include <sharedlib/include/IListener.h>
+#include <sharedlib/include/IMarketSettings.h>
 #include <sharedlib/include/IMarket.h>
 
 class ILogger;

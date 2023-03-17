@@ -52,7 +52,7 @@ class Client:
             print("POOL {}: {}, Currency: {}".format(pool['SecurityExchange'], pool['Symbol'], pool['Currency']))
             self.price_application.subscribe(pool, True, book)
             i = i + 1
-            if i > count:
+            if i >= count:
                 break
 
     def unsubscribePools(self, count, book):
@@ -61,7 +61,7 @@ class Client:
             print("POOL {}: {}, Currency: {}".format(pool['SecurityExchange'], pool['Symbol'], pool['Currency']))
             self.price_application.subscribe(pool, False, book)
             i = i + 1
-            if i > count:
+            if i >= count:
                 break
 
 if __name__ == '__main__':

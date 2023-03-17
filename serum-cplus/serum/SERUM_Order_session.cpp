@@ -5,6 +5,7 @@
 #include <functional>
 
 #include <SerumDEX/SerumMarket/Market.hpp>
+#include <SerumDEX/SerumMarket/FileSettings.hpp>
 #include <SerumDEX/SerumMarket/models.hpp>
 #include <SerumDEX/SerumTrade.h>
 
@@ -14,8 +15,8 @@
 
 const char* TRADE_CONN_NAME="Serum";
 
-#define PUBKEY "5ejVgdkJkgwptewzs5CLYdm6vJxpEL47sErAcnom6i8A"
-#define SECRETKEY "4Vi55eAt4aCfPGrbQKWjESK9UkKvb8AU7jwrzj8ajeA8dbPXEXwB4L1uhkdDEzoZ8bWhJXoRFXcE7aeeve4seARp"
+// #define PUBKEY "5ejVgdkJkgwptewzs5CLYdm6vJxpEL47sErAcnom6i8A"
+// #define SECRETKEY "4Vi55eAt4aCfPGrbQKWjESK9UkKvb8AU7jwrzj8ajeA8dbPXEXwB4L1uhkdDEzoZ8bWhJXoRFXcE7aeeve4seARp"
 
 SERUM_Order_session::SERUM_Order_session(const FIX8::F8MetaCntx& ctx,
                     const FIX8::sender_comp_id& sci,
@@ -50,14 +51,11 @@ SERUM_Order_session::SERUM_Order_session(const FIX8::F8MetaCntx& ctx,
 void SERUM_Order_session::setupOpenbook(const std::shared_ptr < IPoolsRequester >& pools, std::shared_ptr < IListener >  trade_channel )
 {
     SerumMarket* market = new SerumMarket(
-        PUBKEY,
-        SECRETKEY,
-        "https://nd-664-169-151.p2pify.com/a89ccd991de179587a0b8e3356409a9b",
+        std::make_shared< FileSettings > ("/home/sovun/SerumFixServer/serum-cplus/serum/market_settings.json"),
         _logger,
         pools,
         trade_channel,
-        std::bind( &SERUM_Order_session::reportCallback, this, std::placeholders::_1, std::placeholders::_2),
-        "Market_1"
+        std::bind( &SERUM_Order_session::reportCallback, this, std::placeholders::_1, std::placeholders::_2)
      );
     _market = std::shared_ptr<SerumMarket> (market);
 }

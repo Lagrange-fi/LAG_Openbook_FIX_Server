@@ -52,7 +52,7 @@ private:
 
     // FIX response implementation
     void securityList(const std::string& reqId, marketlib::security_request_result_t , const std::list<marketlib::instrument_descr_t>& pools) ;
-    void marketReject(const std::string& reqId, marketlib::ord_rej_reason reason) ;
+    void marketReject(const std::string& reqId, marketlib::md_reject_reason_t reason,  const std::string& text) ;
     void fullSnapshot(const std::string& reqId, const marketlib::instrument_descr_t& sec_id, const BrokerModels::MarketBook&);
     void fullSnapshot(const std::string& reqId, const marketlib::instrument_descr_t& sec_id, const BrokerModels::DepthSnapshot&);
 

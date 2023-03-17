@@ -29,6 +29,7 @@
 #include <sharedlib/include/ILogger.h>
 #include <sharedlib/include/HTTPClient.h>
 #include <sharedlib/include/IMarket.h>
+#include <sharedlib/include/IMarketSettings.h>
 
 
 
@@ -41,6 +42,7 @@ private:
     typedef std::string string;
     typedef std::shared_ptr < IPoolsRequester > pools_ptr;
     typedef std::shared_ptr < IListener > listener_ptr;
+    typedef std::shared_ptr < IMarketSettings > market_settings_ptr;
     // typedef std::shared_ptr < MintAdresses > MintAddresses_ptr;
     typedef marketlib::order_t Order;
     typedef Keypair SecretKey;
@@ -107,9 +109,10 @@ private:
         marketlib::order_state_t new_state_;
     };
 
-    PublicKey _pubkey;
-    Keypair _secretkey;
-    string _http_address;
+    // PublicKey _pubkey;
+    // Keypair _secretkey;
+    // string _http_address;
+    market_settings_ptr _market_settings;
     pools_ptr _pools;
     Orders _open_orders;
     OrdersCallback _orders_callback;
@@ -122,7 +125,7 @@ private:
     std::map<string, uint64_t> _subscribed_channels;
     // std::map<string, string> _mint_addresses;
     uint64_t _message_count;
-    const string _name;
+    // const string _name;
     
     string place_order(
         const MarketChannel&,
@@ -163,6 +166,9 @@ private:
     uint64_t get_lamport_need_for_sol_wrapping(double, double, Side, const OpenOrdersAccountInfo&) const;
 
     time_t current_time() const { return std::time(nullptr);};
+    string get_name();
+    string get_endpoint();
+    Keypair get_private_key();
 
     // void order_checker(const string&, const string&, const ExecutionReport&);
     void check_order(const Instrument&);
@@ -174,7 +180,7 @@ private:
 		return instr.symbol;
 	}
 public:
-    SerumMarket(const string&, const string&, const string&, logger_ptr, pools_ptr, listener_ptr, OrdersCallback, const string& );
+    SerumMarket(market_settings_ptr, logger_ptr, pools_ptr, listener_ptr, OrdersCallback );
     // SerumMarket(const string&, pools_ptr, Callback, OrdersCallback);
     // SerumMarket(const SerumMarket&);
 

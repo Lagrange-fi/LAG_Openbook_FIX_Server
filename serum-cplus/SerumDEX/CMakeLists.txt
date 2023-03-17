@@ -6,6 +6,8 @@ add_library("${SERUM_DEX_NAME}" STATIC
         PoolRequester/InstrumentJSON.cpp
         PoolRequester/InstrumentsJSON.cpp
         PoolRequester/PoolsRequester.cpp
+        SerumMarket/UserCredentials.cpp
+        SerumMarket/FileSettings.cpp
         SerumMarket/Market.cpp
 )
 

@@ -247,12 +247,12 @@ class FixApp(fix.Application):
 
     def onMarketDataReject(self, message, sessionID):
         rejReason = fix.MDReqRejReason()
-        securityID = fix.SecurityID()
+        reqID = fix.MDReqID()
         text = fix.Text()
         data = {
             'broker': self.my_name,
             'event': BrokerEvent.MarketDataReject,
-            'SecurityID': message.getField(securityID).getString() if message.isSetField(securityID) else "",
+            'requestID': message.getField(reqID).getString() if message.isSetField(reqID) else "",
             'description': message.getField(text).getString() if message.isSetField(text) else "",
             'reason': message.getField(rejReason).getString() if message.isSetField(rejReason) else "",
         }

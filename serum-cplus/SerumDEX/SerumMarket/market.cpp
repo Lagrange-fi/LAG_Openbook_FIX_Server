@@ -1,4 +1,19 @@
 #include "Market.hpp"
+
+// #include <iostream>
+// #include <sstream>
+
+// std::string chars_to_hex_string(char* my_chars, int length) {
+//     std::stringstream ss;
+
+//     for (int i = 0; i < length; i++) {
+//         ss << std::hex << std::setfill('0') << std::setw(2) << (int) my_chars[i];
+//     }
+
+//     std::string hex_string = ss.str();
+//     return hex_string;
+// }
+
 using namespace solana; 
 
 SerumMarket::SerumMarket(
@@ -50,25 +65,27 @@ SerumMarket::Order SerumMarket::send_new_order(const Instrument& instrument_, co
     try {
         market_info = get_market_info(instrument_, pubkey);
         orders_account_info = get_orders_account_info(market_info.instr, pubkey);
-        if (!orders_account_info.account.size())
-            throw string("There is no open order account for this symbol " + market_info.instr.symbol);
+        // if (!orders_account_info.account.size())
+        //     throw string("There is no open order account for this symbol " + market_info.instr.symbol);
 
-        // if (orders_account_info.account.size() == 0) {
-        //     auto balance_needed = get_balance_needed();
-        //     auto new_open_order_account = Keypair();
-        //     signers.push_back(new_open_order_account);
-        //     txn.add_instruction(
-        //         create_account(
-        //             CreateAccountParams{
-        //                 owner: _pubkey,
-        //                 new_account: new_open_order_account.get_pubkey(),
-        //                 lamports: balance_needed,
-        //                 program_id: market_info.instr.address
-        //             }
-        //         )
-        //     );
-        //     orders_account_info.account = new_open_order_account.get_pubkey();
-        // }
+        if (orders_account_info.account.size() == 0) {
+            auto balance_needed = get_balance_needed();
+            auto new_open_order_account = Keypair();
+            signers.push_back(new_open_order_account);
+            txn.add_instruction(
+                create_account(
+                    CreateAccountParams{
+                        owner: pubkey,
+                        new_account: new_open_order_account.get_pubkey(),
+                        lamports: balance_needed,
+                        space: sizeof(SolOpenOrderLayout),
+                        program_id: MARKET_KEY// PublicKey("11111111111111111111111111111111") //MARKET_KEY
+                    }
+                )
+            );
+            orders_account_info.account = new_open_order_account.get_pubkey();
+        }
+        
 
         if (order_.side == marketlib::order_side_t::os_Buy && market_info.payer_buy.get_str_key().empty()) {
             auto payer_buy = get_token_account_by_owner(pubkey.get_str_key(), market_info.instr.quote_mint_address);
@@ -86,6 +103,31 @@ SerumMarket::Order SerumMarket::send_new_order(const Instrument& instrument_, co
                             owner: pubkey,
                             new_account: payer_buy.get_pubkey(),
                             lamports: balance_needed,
+                            space: ACCOUNT_LEN,
+                            program_id: PublicKey("11111111111111111111111111111111")
+                        }
+                    )
+                );
+            }
+        }
+
+        if (order_.side == marketlib::order_side_t::os_Sell && market_info.payer_sell.get_str_key().empty()) {
+            auto payer_sell = get_token_account_by_owner(pubkey.get_str_key(), market_info.instr.base_mint_address);
+            if (!payer_sell.empty()) {
+                market_info.payer_sell = payer_sell;
+            }
+            else {
+                auto balance_needed = get_balance_needed();
+                Keypair payer_sell;
+                market_info.payer_sell = payer_sell.get_pubkey();
+                signers.push_back(payer_sell);
+                txn.add_instruction(
+                    create_account(
+                        CreateAccountParams{
+                            owner: pubkey,
+                            new_account: payer_sell.get_pubkey(),
+                            lamports: balance_needed,
+                            space: ACCOUNT_LEN,
                             program_id: PublicKey("11111111111111111111111111111111")
                         }
                     )
@@ -280,7 +322,8 @@ SerumMarket::string SerumMarket::place_order(
                     lamports: get_lamport_need_for_sol_wrapping(
                         limit_price_, max_quantity_, side_, orders_account_info_
                     ),
-                    program_id: PublicKey("11111111111111111111111111111111")
+                    space: ACCOUNT_LEN,
+                    program_id: TOKEN_PROGRAM_ID
                 }
             )
         );
@@ -365,7 +408,7 @@ SerumMarket::MarketChannel SerumMarket::create_market_info(const Instrument& ins
         parsed_market: get_market_layout(instr_.address),
         base_spl_token_multiplier: static_cast<uint64_t>(pow(10, get_mint_decimals(instr_.base_mint_address))),
         quote_spl_token_multiplier: static_cast<uint64_t>(pow(10, get_mint_decimals(instr_.quote_mint_address))),
-        payer_sell: pubkey_
+        payer_sell: instr_.base_mint_address == WRAPPED_SOL_MINT ? pubkey_ : PublicKey("")
     };
 }
 
@@ -507,7 +550,9 @@ Instruction SerumMarket::new_order_v3(const NewOrderV3Params& params_) const
 Instruction SerumMarket::create_account(const CreateAccountParams& params_) const
 {
     Instruction instruction;
-    instruction.set_account_id(params_.program_id);
+    // instruction.set_account_id(params_.program_id);
+    instruction.set_account_id(PublicKey("11111111111111111111111111111111"));
+    // instruction.set_account_id(TOKEN_PROGRAM_ID);
     instruction.set_accounts( Instruction::AccountMetas({
         Instruction::AccountMeta { pubkey: params_.owner, is_writable: true, is_signer: true },
         Instruction::AccountMeta { pubkey: params_.new_account, is_writable: true, is_signer: true }
@@ -516,9 +561,10 @@ Instruction SerumMarket::create_account(const CreateAccountParams& params_) cons
     auto ord_layout = InstructionLayoutCreateOrder {
         0,
         params_.lamports,
-        ACCOUNT_LEN
+        params_.space //ACCOUNT_LEN
     };
-    memcpy(ord_layout.owner, TOKEN_PROGRAM_ID.data(), SIZE_PUBKEY);
+    // memcpy(ord_layout.owner, TOKEN_PROGRAM_ID.data(), SIZE_PUBKEY);
+    memcpy(ord_layout.owner, params_.program_id.data(), SIZE_PUBKEY);
     instruction.set_data(&ord_layout, sizeof(InstructionLayoutCreateOrder));
     return instruction;
 }
@@ -773,7 +819,8 @@ std::string SerumMarket::send_transaction(Transaction &txn_, const Transaction::
     txn_.set_recent_blockhash(get_latest_blockhash());
     txn_.sign(signers_);
     auto msg = txn_.serialize();
-
+    
+    // auto hex_msg = chars_to_hex_string(msg.data(), msg.length());
     // auto hex_msg = to_hex_string(msg);
     // std::cout << hex_msg << std::endl;
 

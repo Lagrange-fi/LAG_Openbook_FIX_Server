@@ -51,7 +51,7 @@ SERUM_Order_session::SERUM_Order_session(const FIX8::F8MetaCntx& ctx,
 void SERUM_Order_session::setupOpenbook(const std::shared_ptr < IPoolsRequester >& pools, std::shared_ptr < IListener >  trade_channel )
 {
     SerumMarket* market = new SerumMarket(
-        std::make_shared< FileSettings > ("/home/sovun/SerumFixServer/serum-cplus/serum/market_settings.json"),
+        std::make_shared< FileSettings > ("market_settings.json"),
         _logger,
         pools,
         trade_channel,

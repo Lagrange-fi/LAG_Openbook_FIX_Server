@@ -43,6 +43,7 @@ struct CreateAccountParams
     PublicKey owner;
     PublicKey new_account;
     uint64_t lamports;
+    uint64_t space;
     PublicKey program_id;
 };
 

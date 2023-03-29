@@ -186,6 +186,7 @@ public:
 
     Order send_new_order(const Instrument&, const Order&) override;
     Order cancel_order(const Instrument&, const string&) override;
+    void create_account(const Instrument&);
 
     ~SerumMarket();
 };

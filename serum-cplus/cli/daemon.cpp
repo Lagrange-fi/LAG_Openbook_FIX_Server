@@ -148,6 +148,7 @@ int main(int argc, char **argv) {
                 if (ms_ord->poll())
                 {
                     std::shared_ptr<FIX8::SessionInstanceBase> inst(ms_ord->create_server_instance());
+                    ((SERUM_Order_session*)(inst->session_ptr()))->setupOpenbook(pools, trade_channel);
                     sessions.push_back(inst);
                     printf("Order Session added, count= %d\n", (int)sessions.size());
                     //inst->session_ptr()->control() |= FIX8::Session::print;

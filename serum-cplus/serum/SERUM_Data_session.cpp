@@ -242,7 +242,8 @@ bool SERUM_Data_session::operator() (const class FIX8::SERUM_Data::MarketDataReq
                     }
                     else if (event == IBrokerClient::BrokerEvent::SubscribedCoinIsNotValid )
                     {
-                        //auto text = std::any_cast<std::string>(data);
+                        //auto tevent == IBrokerClient::BrokerEvent::SubscribedCoinIsNotValid )
+                        //                    {xt = std::any_cast<std::string>(data);
                         _logger->Debug((boost::format("Session | --> 35=Y for %1%") % pair).str().c_str());
                         _sess->marketReject(reqIdStr, marketlib::md_reject_reason_t::unknown_symbol, std::string("subscription is not possible"));
                     }

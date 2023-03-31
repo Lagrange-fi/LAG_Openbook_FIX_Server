@@ -78,10 +78,10 @@ class Client:
         self.order = {
             'Account': "90874hf7ygf476tgrfgihf874bfjhb",
             'ClOrdID': str(self.clId),
-            'Side': Side.Buy,
+            'Side': Side.Sell,
             'OrderQty': 0.1,
             'OrdType': OrderType.Limit,
-            'Price': 40,
+            'Price': 18,
             'TimeInForce': TimeInForce.GoodTillCancel,
         }
 
